@@ -11,9 +11,219 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QStatusBar, QToolBar, QA
                              QFileDialog, QProgressBar, QStyle, QShortcut, QToolButton,
                              QSizePolicy, QStackedWidget, QListWidget, QListWidgetItem)
 
-# ... [Constants and Configuration remain the same] ...
+# ----------------------------
+# Constants and Configuration
+# ----------------------------
+DEFAULT_HOME_PAGE = "https://www.bing.com"
+SEARCH_ENGINES = {
+    "Google": "https://www.google.com/search?q={}",
+    "Bing": "https://www.bing.com/search?q={}",
+    "DuckDuckGo": "https://duckduckgo.com/?q={}",
+    "YouTube": "https://www.youtube.com/results?search_query={}"
+}
+THEMES = {
+    "Light": {
+        "bg": "#ffffff",
+        "fg": "#000000",
+        "tab_bg": "#f1f1f1",
+        "tab_active": "#ffffff",
+        "url_bg": "#f1f3f4"
+    },
+    "Dark": {
+        "bg": "#202124",
+        "fg": "#e8eaed",
+        "tab_bg": "#3c4043",
+        "tab_active": "#202124",
+        "url_bg": "#525355"
+    },
+    "Blue": {
+        "bg": "#e3f2fd",
+        "fg": "#0d47a1",
+        "tab_bg": "#bbdefb",
+        "tab_active": "#e3f2fd",
+        "url_bg": "#bbdefb"
+    }
+}
+
+class AnimatedButton(QPushButton):
+    """Button with hover animation"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setCursor(Qt.PointingHandCursor)
+        self._animation = QPropertyAnimation(self, b"iconSize")
+        self._animation.setDuration(200)
+        self._animation.setEasingCurve(QEasingCurve.OutBack)
+        
+    def enterEvent(self, event):
+        self._animation.setStartValue(self.iconSize())
+        self._animation.setEndValue(QSize(28, 28))
+        self._animation.start()
+        super().enterEvent(event)
+        
+    def leaveEvent(self, event):
+        self._animation.setStartValue(self.iconSize())
+        self._animation.setEndValue(QSize(24, 24))
+        self._animation.start()
+        super().leaveEvent(event)
+
+class DownloadItemWidget(QWidget):
+    """Custom widget for download items"""
+    def __init__(self, download_item, parent=None):
+        super().__init__(parent)
+        self.download = download_item
+        
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        
+        self.icon = QLabel()
+        icon_pixmap = QStyle.standardIcon(
+            QApplication.style(), 
+            QStyle.SP_FileIcon
+        ).pixmap(24, 24)
+        self.icon.setPixmap(icon_pixmap)
+        layout.addWidget(self.icon)
+        
+        self.filename = QLabel(os.path.basename(download_item.path()))
+        layout.addWidget(self.filename, 1)
+        
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        layout.addWidget(self.progress, 2)
+        
+        self.speed_label = QLabel("0 KB/s")
+        layout.addWidget(self.speed_label)
+        
+        self.download.downloadProgress.connect(self.update_progress)
+        self.download.stateChanged.connect(self.update_state)
+        
+    def update_progress(self, bytes_received, bytes_total):
+        if bytes_total > 0:
+            percent = int((bytes_received / bytes_total) * 100)
+            self.progress.setValue(percent)
+            
+            # Calculate download speed
+            elapsed = self.download.startTime().secsTo(datetime.now().time())
+            if elapsed > 0:
+                speed = bytes_received / (elapsed * 1024)
+                self.speed_label.setText(f"{speed:.1f} KB/s")
+                
+    def update_state(self, state):
+        if state == QWebEngineDownloadItem.DownloadCompleted:
+            self.progress.setValue(100)
+            self.speed_label.setText("Completed")
+
+class DownloadManager(QDialog):
+    """Download manager window"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Downloads")
+        self.setMinimumSize(600, 400)
+        
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Header
+        header = QLabel("<h2>Downloads</h2>")
+        layout.addWidget(header)
+        
+        # Download list
+        self.download_list = QListWidget()
+        self.download_list.setAlternatingRowColors(True)
+        layout.addWidget(self.download_list)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        layout.addLayout(btn_layout)
+        
+        self.clear_btn = QPushButton("Clear Completed")
+        self.clear_btn.clicked.connect(self.clear_completed)
+        btn_layout.addWidget(self.clear_btn)
+        
+        self.close_btn = QPushButton("Close")
+        self.close_btn.clicked.connect(self.hide)
+        btn_layout.addWidget(self.close_btn)
+        
+        self.downloads = []
+        
+    def add_download(self, download_item):
+        """Add a new download to the manager"""
+        item = QListWidgetItem(self.download_list)
+        widget = DownloadItemWidget(download_item, self)
+        item.setSizeHint(widget.sizeHint())
+        self.download_list.addItem(item)
+        self.download_list.setItemWidget(item, widget)
+        self.downloads.append(widget)
+        
+    def clear_completed(self):
+        """Remove completed downloads from the list"""
+        for i in range(self.download_list.count() - 1, -1, -1):
+            item = self.download_list.item(i)
+            widget = self.download_list.itemWidget(item)
+            if widget.progress.value() == 100:
+                self.download_list.takeItem(i)
+
+class Tab(QWidget):
+    """Browser tab with enhanced features"""
+    def __init__(self, window, url=None, parent=None):
+        super(Tab, self).__init__(parent)
+        self.window = window
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # WebEngine View
+        self.browser = QWebEngineView()
+        profile = QWebEngineProfile.defaultProfile()
+        profile.downloadRequested.connect(self.on_download_requested)
+        self.browser.setUrl(QUrl(url or DEFAULT_HOME_PAGE))
+        
+        # Connect signals
+        self.browser.urlChanged.connect(self.update_url)
+        self.browser.titleChanged.connect(self.update_title)
+        self.browser.iconChanged.connect(self.update_icon)
+        self.browser.loadProgress.connect(self.update_progress)
+        
+        layout.addWidget(self.browser)
+        self.setLayout(layout)
+        
+        # Tab state
+        self.title = "New Tab"
+        self.icon = QIcon()
+        
+    def update_url(self, url):
+        """Update address bar when URL changes"""
+        self.window.URLBar.setText(url.toString())
+        self.window.URLBar.setCursorPosition(0)
+        self.window.log_action(f"Navigated to: {url.toString()}")
+        
+    def update_title(self, title):
+        """Update tab title when page title changes"""
+        self.title = title[:30] + "..." if len(title) > 30 else title
+        index = self.window.tabs.indexOf(self)
+        if index != -1:
+            self.window.tabs.setTabText(index, self.title)
+            
+    def update_icon(self, icon):
+        """Update tab icon when favicon changes"""
+        self.icon = icon
+        index = self.window.tabs.indexOf(self)
+        if index != -1:
+            self.window.tabs.setTabIcon(index, icon)
+            
+    def update_progress(self, progress):
+        """Update progress bar during page load"""
+        self.window.progress_bar.setVisible(progress < 100)
+        self.window.progress_bar.setValue(progress)
+        
+    def on_download_requested(self, download):
+        """Handle download requests"""
+        download.accept()
+        self.window.download_manager.add_download(download)
+        self.window.download_manager.show()
+        self.window.log_action(f"Download started: {os.path.basename(download.path())}")
 
 class Window(QMainWindow):
+    """Main browser window with enhanced features"""
     def __init__(self, *args, **kwargs):
         super(Window, self).__init__(*args, **kwargs)
         
@@ -31,7 +241,30 @@ class Window(QMainWindow):
         main_layout.setSpacing(0)
         central_widget.setLayout(main_layout)
         
-        # Create navigation toolbar FIRST
+        # Create tab widget
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.setMovable(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.currentChanged.connect(self.tab_changed)
+        
+        # Add new tab button
+        self.new_tab_btn = QToolButton()
+        self.new_tab_btn.setText("+")
+        self.new_tab_btn.setCursor(Qt.PointingHandCursor)
+        self.new_tab_btn.clicked.connect(self.add_new_tab)
+        self.tabs.setCornerWidget(self.new_tab_btn, Qt.TopRightCorner)
+        
+        # Add initial tab
+        self.add_new_tab()
+        
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumHeight(3)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setVisible(False)
+        
+        # Create navigation toolbar
         self.nav_toolbar = QToolBar('Navigation Toolbar')
         self.nav_toolbar.setMovable(False)
         self.nav_toolbar.setIconSize(QSize(24, 24))
@@ -58,7 +291,7 @@ class Window(QMainWindow):
         self.home_btn.clicked.connect(self.go_to_home)
         
         # Address bar with search suggestions
-        self.URLBar = QLineEdit()  # INITIALIZE URLBar HERE
+        self.URLBar = QLineEdit()
         self.URLBar.setPlaceholderText("Search or enter address")
         self.URLBar.returnPressed.connect(self.load_url)
         self.URLBar.setClearButtonEnabled(True)
@@ -126,29 +359,6 @@ class Window(QMainWindow):
             btn.setFlat(True)
             btn.clicked.connect(lambda checked, u=url: self.navigate_to(u))
             self.bookmarks_toolbar.addWidget(btn)
-        
-        # Create tab widget AFTER URLBar initialization
-        self.tabs = QTabWidget()
-        self.tabs.setTabsClosable(True)
-        self.tabs.setMovable(True)
-        self.tabs.tabCloseRequested.connect(self.close_tab)
-        self.tabs.currentChanged.connect(self.tab_changed)
-        
-        # Add new tab button
-        self.new_tab_btn = QToolButton()
-        self.new_tab_btn.setText("+")
-        self.new_tab_btn.setCursor(Qt.PointingHandCursor)
-        self.new_tab_btn.clicked.connect(self.add_new_tab)
-        self.tabs.setCornerWidget(self.new_tab_btn, Qt.TopRightCorner)
-        
-        # Add initial tab
-        self.add_new_tab()
-        
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximumHeight(3)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setVisible(False)
         
         # Create status bar
         self.status_bar = QStatusBar()
