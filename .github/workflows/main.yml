@@ -1,34 +1,51 @@
-name: 🐍 Python PyQt5 CI
+name: Build and Release Fibrowser
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  release:
+    types: [created]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
-      - name: ⬇️ Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 🔧 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - name: 📦 Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install PyQt5 PyInstaller pyqtwebengine
 
-      - name: ✅ Run Syntax Check
+      - name: Build executable
         run: |
-          python -m py_compile main.py
+          pyinstaller --onefile --windowed --name Fibrowser --icon=app.ico Fibrowser.py
 
-      - name: 🧪 (Optional) Unit Tests
-        if: false # Set to true if you later add tests
-        run: |
-          pytest
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Fibrowser
+          path: dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: Fibrowser
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Fibrowser.exe
