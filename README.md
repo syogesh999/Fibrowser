@@ -1,61 +1,64 @@
+---
+
+# 🌐 Fibrowser Pro – Python Web Browser with PyQt5 🚀
+
+Fibrowser Pro is a sleek, modern, and feature-rich custom **web browser** built with **Python** and **PyQt5**. It comes packed with smooth animations, multi-tab browsing, theme support, bookmarks, download manager, developer console, and more — all in one clean and responsive UI! 🧠✨
 
 ---
 
-````markdown
-# 🌐 Fibrowser Pro
+## 🎯 Features
 
-![Python](https://img.shields.io/badge/Python-3.7%2B-blue?logo=python)
-![PyQt5](https://img.shields.io/badge/PyQt5-GUI-green?logo=qt)
-![License](https://img.shields.io/github/license/syogesh999/Fibrowser?style=flat)
-![Stars](https://img.shields.io/github/stars/syogesh999/Fibrowser?style=social)
-
-A sleek and feature-rich GUI-based **web browser** developed using Python and PyQt5.  
-⚡️ Includes multi-tab support, theming, bookmarks, downloads, search engine switching, developer tools, and more.
-
----
-
-## 📌 Features
-
-- 🧭 **Tabbed Browsing**
-- 🎨 **Themes**: Light, Dark, Blue
-- 🔍 **Multiple Search Engines**: Google, Bing, DuckDuckGo, YouTube
-- 💾 **Download Manager**: Track downloads with speed/progress
-- 🔖 **Bookmarks Toolbar**
-- ⌨️ Keyboard Shortcuts (e.g., `Ctrl+T`, `F5`, `F12`)
-- 🔧 **Developer Console**
-- 🧪 Minimal memory footprint
+* 🌍 Multi-tabbed browsing (with "+" add tab)
+* 🎨 Theme support (Light, Dark, Blue)
+* 🔍 Search engine switcher (Google, Bing, DuckDuckGo, YouTube)
+* 📥 Built-in Download Manager with progress tracking
+* ⭐ Quick access Bookmarks Toolbar
+* 🧰 Developer console & status logger
+* 🛠️ Responsive navigation toolbar with animated buttons
+* 🔐 Keyboard shortcuts for quick access
+* 📁 Custom right-click menu with theme selector
 
 ---
 
-## 🖥 Preview
+## 📸 Live Preview
 
-![Screenshot](https://github.com/syogesh999/Fibrowser/assets/preview1.png)  
-*More UI previews and demo gifs coming soon...*
+You can preview a working concept or similar styling from the web version [here](https://syogesh999.github.io/Algo) *(note: this may represent another project layout, as PyQt5-based apps are desktop-only)*
 
 ---
 
-## 🚀 Installation
+## 📦 File Structure
 
-### 🔁 Clone the repository
-
-```bash
-git clone https://github.com/syogesh999/Fibrowser.git
-cd Fibrowser
-````
-
-### 📦 Install dependencies
-
-```bash
-pip install -r requirements.txt
+```
+Fibrowser/
+├── assets/                  # Icons, images, styles (optional)
+├── main.py                  # Entry point (this file)
+├── README.md                # You're reading it 📘
+└── requirements.txt         # Required packages (PyQt5, etc.)
 ```
 
-> If you don’t have `PyQtWebEngine` installed:
+---
+
+## 🚀 Getting Started
+
+### ✅ Prerequisites
+
+* Python 3.7+
+* pip
+
+### 📦 Install Dependencies
 
 ```bash
 pip install PyQt5 PyQtWebEngine
 ```
 
-### ▶️ Run the application
+### 🔄 Clone the Repository
+
+```bash
+git clone https://github.com/syogesh999/Fibrowser.git
+cd Fibrowser
+```
+
+### ▶️ Run the App
 
 ```bash
 python main.py
@@ -63,92 +66,52 @@ python main.py
 
 ---
 
-## 📁 Project Structure
+## ⌨️ Keyboard Shortcuts
 
-```
-Fibrowser/
-├── main.py                 # Main browser code
-├── requirements.txt        # Python dependencies
-├── README.md               # Project documentation
-├── .gitignore              # Files to ignore by Git
-├── assets/                 # (Optional) Icons, themes
-└── docs/                   # (Optional) Documentation or help
-```
-
----
-
-## ⚡ Keyboard Shortcuts
-
-| Shortcut       | Action                   |
-| -------------- | ------------------------ |
-| Ctrl+T         | New Tab                  |
-| Ctrl+W         | Close Tab                |
-| Ctrl+Tab       | Next Tab                 |
-| Ctrl+Shift+Tab | Previous Tab             |
-| Ctrl+L         | Focus Address Bar        |
-| Ctrl+F5        | Hard Refresh             |
-| F12            | Toggle Developer Console |
+| Shortcut             | Action                 |
+| -------------------- | ---------------------- |
+| `Ctrl + T`           | New Tab                |
+| `Ctrl + W`           | Close Tab              |
+| `Ctrl + Tab`         | Next Tab               |
+| `Ctrl + Shift + Tab` | Previous Tab           |
+| `Ctrl + L`           | Focus URL bar          |
+| `F5`                 | Refresh page           |
+| `Ctrl + H`           | Show History (stub)    |
+| `F12`                | Toggle Developer Tools |
 
 ---
 
-## 📜 Requirements
+## 🎨 Theme Support
 
-* Python 3.7+
-* PyQt5
-* PyQtWebEngine
+Choose from:
 
-📌 Add to `requirements.txt`:
+* 🌞 Light
+* 🌚 Dark *(default)*
+* 🔷 Blue
 
-```
-PyQt5
-PyQtWebEngine
-```
+Via right-click context menu or from internal settings.
 
 ---
 
-## 🛠 Future Improvements
+## 🧾 License
 
-* 📑 History Management
-* 🧩 Extensions Support
-* 📁 Save/Load Sessions
-* 👤 User Profiles
-* 🧪 Private Browsing Mode
+This project is open-source and available under the [MIT License](LICENSE).
 
 ---
 
-## 👨‍💻 Author
+## 🙌 Contributions
 
-Developed by **[Yogesh](https://github.com/syogesh999)**
-🔗 Connect on [LinkedIn](https://www.linkedin.com/in/your-profile)
-
----
-
-## 📄 License
-
-Licensed under the **MIT License** – free to use, modify, and distribute. 🙌
+Pull requests, issues, and feedback are welcome! Feel free to open an [issue](https://github.com/syogesh999/Fibrowser/issues) or submit a PR.
 
 ---
 
-## 🌟 Support
+## 📫 Contact
 
-If you like this project, feel free to:
-
-* ⭐️ Star the repository
-* 🔁 Share it
-* 🛠 Contribute
-
-> Happy Browsing! 🚀
-
-```
+For feedback, collaboration, or inquiries:
+**Yogesh S** – [GitHub](https://github.com/syogesh999)
 
 ---
 
-Let me know if you'd like help:
+### 🛠️ Made with ❤️ using PyQt5
 
-- Creating a `requirements.txt` from your environment  
-- Generating a `preview.gif` or adding real screenshots  
-- Adding a GUI for settings, extensions, or themes  
-- Making this a standalone `.exe` using PyInstaller  
-
-Just say the word!
-```
+---
