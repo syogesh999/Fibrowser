@@ -1,85 +1,90 @@
+Perfect! Here's your updated `README.md` version with:
+
+* 🎯 **Badges**
+* 📷 **Placeholder for screenshots**
+* 📁 Full **file structure**
+* 📦 `requirements.txt`
+* 🌐 Your GitHub live link
 
 ---
 
-```markdown
+````markdown
 # 🌐 Fibrowser Pro
 
-A **lightweight, customizable, and modern GUI-based web browser** built using **Python** and **PyQt5**.  
-Fibrowser Pro offers animated controls, multi-tab support, dark/light/blue themes, a download manager, and more — making it a smooth blend of utility and UI/UX! 🚀
+![Python](https://img.shields.io/badge/Python-3.7%2B-blue?logo=python)
+![PyQt5](https://img.shields.io/badge/PyQt5-GUI-green?logo=qt)
+![License](https://img.shields.io/github/license/syogesh999/Fibrowser?style=flat)
+![Stars](https://img.shields.io/github/stars/syogesh999/Fibrowser?style=social)
+
+A sleek and feature-rich GUI-based **web browser** developed using Python and PyQt5.  
+⚡️ Includes multi-tab support, theming, bookmarks, downloads, search engine switching, developer tools, and more.
 
 ---
 
-## ✨ Features
+## 📌 Features
 
-- 🧭 **Tabbed Browsing** with animated tab controls
-- 🔍 **Multiple Search Engine Support** (Google, Bing, DuckDuckGo, YouTube)
-- 🎨 **Themes** – Light, Dark, and Blue
-- 💾 **Download Manager** with real-time progress and speed info
+- 🧭 **Tabbed Browsing**
+- 🎨 **Themes**: Light, Dark, Blue
+- 🔍 **Multiple Search Engines**: Google, Bing, DuckDuckGo, YouTube
+- 💾 **Download Manager**: Track downloads with speed/progress
 - 🔖 **Bookmarks Toolbar**
-- 📜 **Console Logging** and Dev Tools Toggle (F12)
-- 🔐 Secure navigation with auto-HTTPS detection
-- ⚡ **Animated buttons** for better interaction feedback
-- ⌨️ Keyboard Shortcuts for faster access (Ctrl+T, Ctrl+W, etc.)
-- 📁 Save & load browsing history (future scope)
+- ⌨️ Keyboard Shortcuts (e.g., `Ctrl+T`, `F5`, `F12`)
+- 🔧 **Developer Console**
+- 🧪 Minimal memory footprint
 
 ---
 
-## 📂 Project Structure
+## 🖥 Preview
 
-```
-
-Fibrowser/
-├── main.py                 # Main executable script
-├── assets/                 # Icons, themes (optional)
-├── docs/                   # Documentation (optional)
-├── README.md               # This file
-├── requirements.txt        # Dependencies
-└── .gitignore
-
-````
+![Screenshot](https://github.com/syogesh999/Fibrowser/assets/preview1.png)  
+*More UI previews and demo gifs coming soon...*
 
 ---
 
-## 🛠 Requirements
+## 🚀 Installation
 
-- Python 3.7+
-- PyQt5
-- PyQtWebEngine
-
-Install dependencies with:
-
-```bash
-pip install -r requirements.txt
-````
-
----
-
-## 🚀 Getting Started
-
-Clone the repository:
+### 🔁 Clone the repository
 
 ```bash
 git clone https://github.com/syogesh999/Fibrowser.git
 cd Fibrowser
+````
+
+### 📦 Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> If you don’t have `PyQtWebEngine` installed:
+
+```bash
+pip install PyQt5 PyQtWebEngine
+```
+
+### ▶️ Run the application
+
+```bash
 python main.py
 ```
 
 ---
 
-## 🔗 Live Preview (Demo)
+## 📁 Project Structure
 
-> ⚠️ Being a desktop app, this project does not have a hosted live version.
-> You can see a **preview or screenshots** [here](https://github.com/syogesh999/Fibrowser/assets) *(Optional: Add image links or gifs)*.
+```
+Fibrowser/
+├── main.py                 # Main browser code
+├── requirements.txt        # Python dependencies
+├── README.md               # Project documentation
+├── .gitignore              # Files to ignore by Git
+├── assets/                 # (Optional) Icons, themes
+└── docs/                   # (Optional) Documentation or help
+```
 
 ---
 
-## 📸 Screenshots
-
-> Add screenshots or GIFs showing the UI in action here.
-
----
-
-## 📌 Keyboard Shortcuts
+## ⚡ Keyboard Shortcuts
 
 | Shortcut       | Action                   |
 | -------------- | ------------------------ |
@@ -93,32 +98,64 @@ python main.py
 
 ---
 
-## 📃 License
+## 📜 Requirements
 
-This project is licensed under the **MIT License**.
-Feel free to fork, modify, and contribute. 🙌
+* Python 3.7+
+* PyQt5
+* PyQtWebEngine
 
----
+📌 Add to `requirements.txt`:
 
-## 🙋‍♂️ Author
-
-Made with ❤️ by **[Yogesh](https://github.com/syogesh999)**
-Connect with me on [LinkedIn](https://www.linkedin.com/in/your-profile)
-
----
-
-## ⭐️ If you like this project...
-
-...consider giving it a star 🌟 and sharing it with others!
-
-````
-
----
-
-> ✅ **Tip:** Add a `requirements.txt` file like:
-
-```txt
+```
 PyQt5
 PyQtWebEngine
-````
+```
 
+---
+
+## 🛠 Future Improvements
+
+* 📑 History Management
+* 🧩 Extensions Support
+* 📁 Save/Load Sessions
+* 👤 User Profiles
+* 🧪 Private Browsing Mode
+
+---
+
+## 👨‍💻 Author
+
+Developed by **[Yogesh](https://github.com/syogesh999)**
+🔗 Connect on [LinkedIn](https://www.linkedin.com/in/your-profile)
+
+---
+
+## 📄 License
+
+Licensed under the **MIT License** – free to use, modify, and distribute. 🙌
+
+---
+
+## 🌟 Support
+
+If you like this project, feel free to:
+
+* ⭐️ Star the repository
+* 🔁 Share it
+* 🛠 Contribute
+
+> Happy Browsing! 🚀
+
+```
+
+---
+
+Let me know if you'd like help:
+
+- Creating a `requirements.txt` from your environment  
+- Generating a `preview.gif` or adding real screenshots  
+- Adding a GUI for settings, extensions, or themes  
+- Making this a standalone `.exe` using PyInstaller  
+
+Just say the word!
+```
