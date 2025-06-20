@@ -53,6 +53,7 @@ class AnimatedButton(QPushButton):
         self._animation = QPropertyAnimation(self, b"iconSize")
         self._animation.setDuration(200)
         self._animation.setEasingCurve(QEasingCurve.OutBack)
+        self.setIconSize(QSize(24, 24))
         
     def enterEvent(self, event):
         self._animation.setStartValue(self.iconSize())
@@ -192,35 +193,40 @@ class Tab(QWidget):
         
     def update_url(self, url):
         """Update address bar when URL changes"""
-        self.window.URLBar.setText(url.toString())
-        self.window.URLBar.setCursorPosition(0)
-        self.window.log_action(f"Navigated to: {url.toString()}")
+        if hasattr(self.window, 'URLBar') and self.window.URLBar:
+            self.window.URLBar.setText(url.toString())
+            self.window.URLBar.setCursorPosition(0)
+            self.window.log_action(f"Navigated to: {url.toString()}")
         
     def update_title(self, title):
         """Update tab title when page title changes"""
         self.title = title[:30] + "..." if len(title) > 30 else title
-        index = self.window.tabs.indexOf(self)
-        if index != -1:
-            self.window.tabs.setTabText(index, self.title)
+        if self.window.tabs:
+            index = self.window.tabs.indexOf(self)
+            if index != -1:
+                self.window.tabs.setTabText(index, self.title)
             
     def update_icon(self, icon):
         """Update tab icon when favicon changes"""
         self.icon = icon
-        index = self.window.tabs.indexOf(self)
-        if index != -1:
-            self.window.tabs.setTabIcon(index, icon)
+        if self.window.tabs:
+            index = self.window.tabs.indexOf(self)
+            if index != -1:
+                self.window.tabs.setTabIcon(index, icon)
             
     def update_progress(self, progress):
         """Update progress bar during page load"""
-        self.window.progress_bar.setVisible(progress < 100)
-        self.window.progress_bar.setValue(progress)
+        if hasattr(self.window, 'progress_bar') and self.window.progress_bar:
+            self.window.progress_bar.setVisible(progress < 100)
+            self.window.progress_bar.setValue(progress)
         
     def on_download_requested(self, download):
         """Handle download requests"""
         download.accept()
-        self.window.download_manager.add_download(download)
-        self.window.download_manager.show()
-        self.window.log_action(f"Download started: {os.path.basename(download.path())}")
+        if hasattr(self.window, 'download_manager') and self.window.download_manager:
+            self.window.download_manager.add_download(download)
+            self.window.download_manager.show()
+            self.window.log_action(f"Download started: {os.path.basename(download.path())}")
 
 class Window(QMainWindow):
     """Main browser window with enhanced features"""
@@ -241,30 +247,7 @@ class Window(QMainWindow):
         main_layout.setSpacing(0)
         central_widget.setLayout(main_layout)
         
-        # Create tab widget
-        self.tabs = QTabWidget()
-        self.tabs.setTabsClosable(True)
-        self.tabs.setMovable(True)
-        self.tabs.tabCloseRequested.connect(self.close_tab)
-        self.tabs.currentChanged.connect(self.tab_changed)
-        
-        # Add new tab button
-        self.new_tab_btn = QToolButton()
-        self.new_tab_btn.setText("+")
-        self.new_tab_btn.setCursor(Qt.PointingHandCursor)
-        self.new_tab_btn.clicked.connect(self.add_new_tab)
-        self.tabs.setCornerWidget(self.new_tab_btn, Qt.TopRightCorner)
-        
-        # Add initial tab
-        self.add_new_tab()
-        
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximumHeight(3)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setVisible(False)
-        
-        # Create navigation toolbar
+        # Create navigation toolbar FIRST
         self.nav_toolbar = QToolBar('Navigation Toolbar')
         self.nav_toolbar.setMovable(False)
         self.nav_toolbar.setIconSize(QSize(24, 24))
@@ -314,6 +297,7 @@ class Window(QMainWindow):
         self.bookmarks_btn = AnimatedButton()
         self.bookmarks_btn.setIcon(self.style().standardIcon(QStyle.SP_DirLinkIcon))
         self.bookmarks_btn.setToolTip("Bookmarks")
+        self.bookmarks_btn.clicked.connect(self.toggle_bookmarks_bar)
         
         # Downloads button
         self.downloads_btn = AnimatedButton()
@@ -359,6 +343,29 @@ class Window(QMainWindow):
             btn.setFlat(True)
             btn.clicked.connect(lambda checked, u=url: self.navigate_to(u))
             self.bookmarks_toolbar.addWidget(btn)
+        
+        # Create tab widget AFTER URLBar initialization
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.setMovable(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.currentChanged.connect(self.tab_changed)
+        
+        # Add new tab button
+        self.new_tab_btn = QToolButton()
+        self.new_tab_btn.setText("+")
+        self.new_tab_btn.setCursor(Qt.PointingHandCursor)
+        self.new_tab_btn.clicked.connect(self.add_new_tab)
+        self.tabs.setCornerWidget(self.new_tab_btn, Qt.TopRightCorner)
+        
+        # Add initial tab
+        self.add_new_tab()
+        
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumHeight(3)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setVisible(False)
         
         # Create status bar
         self.status_bar = QStatusBar()
@@ -442,10 +449,11 @@ class Window(QMainWindow):
         
     def tab_changed(self, index):
         """Handle tab change events"""
-        if index >= 0:
+        if index >= 0 and hasattr(self, 'URLBar'):
             tab = self.tabs.widget(index)
-            self.URLBar.setText(tab.browser.url().toString())
-            self.URLBar.setCursorPosition(0)
+            if tab:
+                self.URLBar.setText(tab.browser.url().toString())
+                self.URLBar.setCursorPosition(0)
             
     def current_tab(self):
         """Get the current active tab"""
@@ -480,9 +488,12 @@ class Window(QMainWindow):
     def load_url(self):
         """Load URL from address bar"""
         if self.current_tab():
-            text = self.URLBar.text()
+            text = self.URLBar.text().strip()
             
             # Check if it's a search query
+            if not text:
+                return
+                
             if ' ' in text or '.' not in text:
                 search_url = SEARCH_ENGINES[self.current_engine].format(text)
                 self.current_tab().browser.setUrl(QUrl(search_url))
@@ -509,9 +520,8 @@ class Window(QMainWindow):
         
     def show_settings(self):
         """Show settings dialog"""
-        # In a real app, this would open a settings dialog
-        self.log_action("Settings opened")
         self.toggle_bookmarks_bar()
+        self.log_action("Settings opened")
         
     def toggle_bookmarks_bar(self):
         """Toggle bookmarks toolbar visibility"""
@@ -591,12 +601,16 @@ class Window(QMainWindow):
         """Log actions to console and status bar"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
-        self.console.append(log_entry)
-        self.status_label.setText(message)
         
-        # Auto-scroll to bottom
-        scrollbar = self.console.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        if hasattr(self, 'console') and self.console:
+            self.console.append(log_entry)
+            
+            # Auto-scroll to bottom
+            scrollbar = self.console.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+        
+        if hasattr(self, 'status_label') and self.status_label:
+            self.status_label.setText(message)
         
     def contextMenuEvent(self, event):
         """Custom context menu for tabs"""
