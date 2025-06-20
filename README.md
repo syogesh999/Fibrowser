@@ -1,10 +1,3 @@
-Perfect! Here's your updated `README.md` version with:
-
-* 🎯 **Badges**
-* 📷 **Placeholder for screenshots**
-* 📁 Full **file structure**
-* 📦 `requirements.txt`
-* 🌐 Your GitHub live link
 
 ---
 
