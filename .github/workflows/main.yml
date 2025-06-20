@@ -22,18 +22,18 @@ name: Build and Release Fibrowser Pro 🧊
 on:
   push:
     tags:
-      - 'v*'  # Trigger only when a version tag is pushed (e.g., v1.0.0)
-  workflow_dispatch:  # Allow manual trigger
+      - "v*" # Trigger only when a version tag is pushed (e.g., v1.0.0)
+  workflow_dispatch: # Allow manual trigger
 
 env:
-  PYTHON_VERSION: '3.10'
+  PYTHON_VERSION: "3.10"
   APP_NAME: FibrowserPro
   MAIN_SCRIPT: main.py
 
 jobs:
   build:
     name: 🛠️ Build EXE with PyInstaller
-    runs-on: windows-latest  # Use Windows for Windows executable
+    runs-on: windows-latest # Use Windows for Windows executable
 
     steps:
       - name: ⬇️ Checkout code
