@@ -1,5 +1,8 @@
+
+
 ---
 
+```markdown
 # 🌐 Fibrowser Pro – Python Web Browser with PyQt5 🚀
 
 Fibrowser Pro is a sleek, modern, and feature-rich custom **web browser** built with **Python** and **PyQt5**. It comes packed with smooth animations, multi-tab browsing, theme support, bookmarks, download manager, developer console, and more — all in one clean and responsive UI! 🧠✨
@@ -29,12 +32,14 @@ You can preview a working concept or similar styling from the web version [here]
 ## 📦 File Structure
 
 ```
+
 Fibrowser/
 ├── assets/                  # Icons, images, styles (optional)
 ├── main.py                  # Entry point (this file)
 ├── README.md                # You're reading it 📘
 └── requirements.txt         # Required packages (PyQt5, etc.)
-```
+
+````
 
 ---
 
@@ -49,7 +54,7 @@ Fibrowser/
 
 ```bash
 pip install PyQt5 PyQtWebEngine
-```
+````
 
 ### 🔄 Clone the Repository
 
@@ -109,9 +114,5 @@ Pull requests, issues, and feedback are welcome! Feel free to open an [issue](ht
 
 For feedback, collaboration, or inquiries:
 **Yogesh S** – [GitHub](https://github.com/syogesh999)
-
----
-
-### 🛠️ Made with ❤️ using PyQt5
 
 ---
