@@ -22,7 +22,7 @@ Fibrowser Pro is a sleek, modern, and feature-rich custom **web browser** built 
 ## 📸 Live Preview
 
 You can preview a working concept or similar styling from the web version  by downloading the .exe 
-👉 [View Demo Layout]([https://syogesh999.github.io/Algo](https://github.com/syogesh999/Fibrowser/releases/tag/V1.1.0))  
+👉 [View Demo Layout]([https://syogesh999.github.io/Algo](https://github.com/syogesh999/Fibrowser/releases/tag/V1.1.0)])
 *Note: This may represent another project layout. Fibrowser Pro is a desktop-only PyQt5 application.*
 
 ---
