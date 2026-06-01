@@ -56,7 +56,7 @@ def main():
         
         # Set icon
         try:
-            app.setWindowIcon(get_icon("favicon.png", QStyle.SP_ComputerIcon))
+            app.setWindowIcon(get_icon("favicon.png", QStyle.StandardPixmap.SP_ComputerIcon))
         except Exception:
             pass
         
