@@ -7,6 +7,7 @@ Launches the main window and handles global exceptions.
 import sys
 import logging
 import traceback
+# pyrefly: ignore [missing-import]
 from PyQt5.QtWidgets import QApplication, QMessageBox, QStyle
 
 from fibrowser.config import APP_NAME, APP_VERSION, get_icon
