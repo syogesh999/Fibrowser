@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fibrowser-pro"
+version = "2.0.0"
+description = "Advanced web browser built with PyQt5 - Modern, sleek, feature-rich"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Development Team"}
+]
+keywords = ["browser", "web", "pyqt5", "desktop"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "PyQt5>=5.15.9",
+    "PyQtWebEngine>=5.15.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "PyInstaller>=6.2.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/syogesh999/Fibrowser"
+Documentation = "https://github.com/syogesh999/Fibrowser#readme"
+Repository = "https://github.com/syogesh999/Fibrowser.git"
+Issues = "https://github.com/syogesh999/Fibrowser/issues"
+
