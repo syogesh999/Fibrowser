@@ -44,3 +44,7 @@ Documentation = "https://github.com/syogesh999/Fibrowser#readme"
 Repository = "https://github.com/syogesh999/Fibrowser.git"
 Issues = "https://github.com/syogesh999/Fibrowser/issues"
 
+[tool.pyrefly]
+python-interpreter-path = ".venv/Scripts/python.exe"
+site-package-path = [".venv/Lib/site-packages"]
+
