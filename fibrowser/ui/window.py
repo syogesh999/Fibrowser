@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
 
+# pyrefly: ignore [missing-import]
 from PyQt5.QtCore import QUrl, Qt, QSize, QTimer, QPoint
 from PyQt5.QtGui import QIcon, QKeySequence, QColor
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEngineDownloadItem, QWebEnginePage
