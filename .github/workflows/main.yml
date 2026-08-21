@@ -1,46 +1,27 @@
-# This workflow will build and push a Python application to an Azure Web App when a commit is pushed to your default branch.
-#
-# This workflow assumes you have already created the target Azure App Service web app.
-# For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-python?tabs=bash&pivots=python-framework-flask
-#
-# To configure this workflow:
-#
-# 1. Download the Publish Profile for your Azure Web App. You can download this file from the Overview page of your Web App in the Azure Portal.
-#    For more information: https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
-#
-# 2. Create a secret in your repository named AZURE_WEBAPP_PUBLISH_PROFILE, paste the publish profile contents as the value of the secret.
-#    For instructions on obtaining the publish profile see: https://docs.microsoft.com/azure/app-service/deploy-github-actions#configure-the-github-secret
-#
-# 3. Change the value for the AZURE_WEBAPP_NAME. Optionally, change the PYTHON_VERSION environment variables below.
-#
-# For more information on GitHub Actions for Azure: https://github.com/Azure/Actions
-# For more information on the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples
-
 name: Build and Release Fibrowser Pro 🧊
 
 on:
   push:
     tags:
-      - "v*" # Trigger only when a version tag is pushed (e.g., v1.0.0)
+      - "v*" # Trigger when a version tag is pushed (e.g., v2.0.0)
   workflow_dispatch: # Allow manual trigger
 
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.11"
   APP_NAME: FibrowserPro
   MAIN_SCRIPT: main.py
 
 jobs:
   build:
     name: 🛠️ Build EXE with PyInstaller
-    runs-on: windows-latest # Use Windows for Windows executable
+    runs-on: windows-latest
 
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -52,13 +33,19 @@ jobs:
 
       - name: 🏗️ Build executable with PyInstaller
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name "${{ env.APP_NAME }}" ${{ env.MAIN_SCRIPT }}
+          pyinstaller --noconfirm --onefile --windowed --name "${{ env.APP_NAME }}" --add-data "assets;assets" ${{ env.MAIN_SCRIPT }}
 
-      - name: 📤 Upload EXE as artifact
+      - name: 📦 Create ZIP Archive
+        run: |
+          Compress-Archive -Path dist\FibrowserPro.exe -DestinationPath dist\FibrowserPro-windows-x64.zip -Force
+
+      - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FibrowserPro-exe
-          path: dist/FibrowserPro.exe
+          name: FibrowserPro-release-binaries
+          path: |
+            dist/FibrowserPro.exe
+            dist/FibrowserPro-windows-x64.zip
 
   release:
     name: 🚀 Create GitHub Release
@@ -67,17 +54,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - name: ⬇️ Download build artifact
+      - name: ⬇️ Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: FibrowserPro-exe
-          path: .
+          name: FibrowserPro-release-binaries
+          path: dist
 
       - name: 🚀 Publish Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          files: FibrowserPro.exe
+          files: |
+            dist/FibrowserPro.exe
+            dist/FibrowserPro-windows-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
