@@ -1,11 +1,13 @@
-from PyQt5.QtCore import Qt, QSize, QTimer, QPoint, QPropertyAnimation, QEasingCurve
+from typing import Optional, Any
+from PyQt5.QtCore import Qt, QSize, QTimer, QPoint, QPropertyAnimation, QEasingCurve, QEvent
 from PyQt5.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel
 from fibrowser.config import THEMES
 
 class AnimatedButton(QPushButton):
-    """Button with smooth hover animation and modern styling"""
+    """Modern button with smooth hover icon scale animation."""
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize animated button."""
         super().__init__(*args, **kwargs)
         self.setCursor(Qt.PointingHandCursor)
         self.setFocusPolicy(Qt.NoFocus)
@@ -17,24 +19,39 @@ class AnimatedButton(QPushButton):
         self._size_animation.setEasingCurve(QEasingCurve.OutBack)
         self.setIconSize(QSize(24, 24))
         
-    def enterEvent(self, event):
-        """Handle mouse enter event"""
+    def enterEvent(self, event: QEvent) -> None:
+        """Handle mouse enter event to enlarge icon smoothly.
+        
+        Args:
+            event: Enter event
+        """
         self._size_animation.setStartValue(self.iconSize())
         self._size_animation.setEndValue(QSize(28, 28))
         self._size_animation.start()
         super().enterEvent(event)
         
-    def leaveEvent(self, event):
-        """Handle mouse leave event"""
+    def leaveEvent(self, event: QEvent) -> None:
+        """Handle mouse leave event to restore normal icon size.
+        
+        Args:
+            event: Leave event
+        """
         self._size_animation.setStartValue(self.iconSize())
         self._size_animation.setEndValue(QSize(24, 24))
         self._size_animation.start()
         super().leaveEvent(event)
 
 class ToastNotification(QWidget):
-    """Sleek overlay toast notification that fades in and out at the bottom-right"""
+    """Sleek floating toast notification that fades in and out at the bottom-right of the window."""
     
-    def __init__(self, text: str, parent: QWidget, duration_ms: int = 3000):
+    def __init__(self, text: str, parent: QWidget, duration_ms: int = 3000) -> None:
+        """Initialize and display toast notification.
+        
+        Args:
+            text: Toast notification text message
+            parent: Parent window widget
+            duration_ms: Duration in milliseconds before fading out
+        """
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip | Qt.SubWindow)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -54,7 +71,7 @@ class ToastNotification(QWidget):
             
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: rgba(30, 30, 30, 0.85);
+                background-color: rgba(30, 30, 30, 0.90);
                 border: 1px solid {accent};
                 border-radius: 8px;
             }}
@@ -68,18 +85,22 @@ class ToastNotification(QWidget):
         
         self.show_toast(duration_ms)
         
-    def reposition(self):
+    def reposition(self) -> None:
+        """Position toast at the bottom-right corner of the parent window."""
         parent = self.parentWidget()
         if parent:
             p_geom = parent.geometry()
-            # Position at bottom-right corner of parent window
             x = p_geom.width() - self.width() - 20
             y = p_geom.height() - self.height() - 50
-            # Map parent local position to global coordinates
             global_pos = parent.mapToGlobal(QPoint(x, y))
             self.move(global_pos)
             
-    def show_toast(self, duration_ms: int):
+    def show_toast(self, duration_ms: int) -> None:
+        """Fade in toast and set timer to fade out.
+        
+        Args:
+            duration_ms: Duration in ms
+        """
         self.setWindowOpacity(0.0)
         self.show()
         
@@ -89,7 +110,8 @@ class ToastNotification(QWidget):
         
         QTimer.singleShot(duration_ms, self.fade_out)
         
-    def fade_out(self):
+    def fade_out(self) -> None:
+        """Fade out toast and destroy widget."""
         try:
             self.anim.stop()
             self.anim.setStartValue(self.windowOpacity())

@@ -1,17 +1,43 @@
 import os
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
-from PyQt5.QtCore import QSize
+from PyQt5.QtCore import QSize, QUrl
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QStyle
 
+# Application Metadata & Dimension Constants
 DEFAULT_HOME_PAGE = "https://www.bing.com"
 APP_NAME = "Fibrowser Pro"
 APP_VERSION = "2.0.0"
 WINDOW_MIN_WIDTH = 1000
 WINDOW_MIN_HEIGHT = 700
+MAX_TABS = 100
+TAB_THROTTLE_SECONDS = 0.1
+HISTORY_MAX_SIZE = 500
+HISTORY_SAVE_DEBOUNCE_MS = 2000
+PROGRESS_BAR_HEIGHT = 3
+DEFAULT_ZOOM = 1.0
+LOG_FILE_NAME = "debug.log"
+
+# Patterns of sensitive system files to protect against unauthorized access
+SENSITIVE_FILE_PATTERNS = [
+    "config\\sam",
+    "config/sam",
+    "config\\system",
+    "config/system",
+    "config\\security",
+    "config/security",
+    "drivers\\etc\\hosts",
+    "drivers/etc/hosts",
+    "/etc/shadow",
+    "/etc/passwd",
+    "id_rsa",
+    "id_ed25519",
+    ".env",
+    "ntds.dit"
+]
 
 SEARCH_ENGINES: Dict[str, str] = {
     "Google": "https://www.google.com/search?q={}",
@@ -23,7 +49,7 @@ SEARCH_ENGINES: Dict[str, str] = {
 
 @dataclass
 class Theme:
-    """Theme color configuration"""
+    """Theme color configuration definition"""
     name: str
     bg: str
     fg: str
@@ -86,20 +112,92 @@ THEMES: Dict[str, Theme] = {
     )
 }
 
-# Helper to find resources bundled with PyInstaller
+# Standard icon fallback dictionary mapping icon names to Qt StandardPixmaps
+ICON_FALLBACK_MAP = {
+    "back_icon.png": QStyle.SP_ArrowBack,
+    "next_icon.png": QStyle.SP_ArrowForward,
+    "refresh_icon.png": QStyle.SP_BrowserReload,
+    "home_icon.png": QStyle.SP_DirHomeIcon,
+    "bookmarks_icon.png": QStyle.SP_DirLinkIcon,
+    "history_icon.png": QStyle.SP_FileDialogListView,
+    "downloads_icon.png": QStyle.SP_DialogSaveButton,
+    "private_icon.png": QStyle.SP_FileDialogEnd,
+    "settings_icon.png": QStyle.SP_FileDialogDetailedView,
+    "web_dark_icon.png": QStyle.SP_DesktopIcon,
+    "favicon.png": QStyle.SP_ComputerIcon,
+}
+
 def get_resource_path(relative_path: str) -> str:
-    """Get absolute path to resource, works for dev and for PyInstaller"""
+    """Get absolute path to resource, works for dev mode and for PyInstaller bundled builds.
+    
+    Args:
+        relative_path: Relative path to resource file
+        
+    Returns:
+        Absolute filesystem path
+    """
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
     except AttributeError:
         # Resolved to parent of this file's directory if in config.py
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-def get_icon(name: str, fallback_style: QStyle.StandardPixmap) -> QIcon:
-    """Load icon from assets directory or fallback to standard style icon"""
+def get_icon(name: str, fallback_style: Optional[QStyle.StandardPixmap] = None) -> QIcon:
+    """Load icon from assets directory or fallback to standard style icon.
+    
+    Args:
+        name: Name of the icon file in assets/icons
+        fallback_style: Optional fallback QStyle.StandardPixmap
+        
+    Returns:
+        QIcon object
+    """
     icon_path = get_resource_path(os.path.join("assets", "icons", name))
     if os.path.exists(icon_path):
         return QIcon(icon_path)
-    return QApplication.style().standardIcon(fallback_style)
+    
+    if fallback_style is None:
+        fallback_style = ICON_FALLBACK_MAP.get(name, QStyle.SP_FileIcon)
+        
+    app = QApplication.instance()
+    if app:
+        return QApplication.style().standardIcon(fallback_style)
+    return QIcon()
+
+def format_error_message(error_obj: Any) -> str:
+    """Format an exception, QUrl, or error object into an actionable, user-friendly message.
+    
+    Args:
+        error_obj: Error object, exception, or QUrl
+        
+    Returns:
+        Formatted error message string
+    """
+    if isinstance(error_obj, QUrl):
+        err_str = error_obj.errorString() if hasattr(error_obj, 'errorString') else ""
+        raw = error_obj.toString()[:80]
+        if err_str:
+            return f"Invalid URL ({err_str}): {raw}"
+        return f"Invalid or malformed URL: {raw}"
+    elif isinstance(error_obj, Exception):
+        return f"{type(error_obj).__name__}: {str(error_obj)}"
+    return str(error_obj)
+
+def is_safe_local_path(path_str: str) -> bool:
+    """Check whether a given path string is safe to open as a local file.
+    Prevents path traversal into sensitive operating system databases and credential stores.
+    
+    Args:
+        path_str: Local file path string
+        
+    Returns:
+        True if safe, False if restricted or sensitive
+    """
+    normalized = path_str.lower().replace('/', '\\')
+    for sensitive in SENSITIVE_FILE_PATTERNS:
+        sensitive_norm = sensitive.lower().replace('/', '\\')
+        if sensitive_norm in normalized:
+            return False
+    return True

@@ -1,41 +1,56 @@
-
 # 🌐 Fibrowser Pro – Python Web Browser with PyQt5 🚀
 
-Fibrowser Pro is a sleek, modern, and feature-rich custom **web browser** built with **Python** and **PyQt5**. It comes packed with smooth animations, multi-tab browsing, theme support, bookmarks, download manager, developer console, and more — all in one clean and responsive UI! 🧠✨
+Fibrowser Pro is a sleek, modern, and feature-rich desktop **web browser** built with **Python**, **PyQt5**, and **PyQtWebEngine**. It comes packed with multi-tab browsing, isolated private mode, full theme support (Light, Dark, Blue, Nord, Dracula), Web Dark Mode, bookmark manager with undo/redo, real-time download manager, developer console, and robust error recovery.
 
 ---
 
 ## 🎯 Features
 
-- 🌍 Multi-tabbed browsing (with "+" add tab)
-- 🎨 Theme support (Light, Dark, Blue)
-- 🔍 Search engine switcher (Google, Bing, DuckDuckGo, YouTube)
-- 📥 Built-in Download Manager with progress tracking
-- ⭐ Quick access Bookmarks Toolbar
-- 🧰 Developer console & status logger
-- 🛠️ Responsive navigation toolbar with animated buttons
-- 🔐 Keyboard shortcuts for quick access
-- 📁 Custom right-click menu with theme selector
+- 🌍 **Multi-Tabbed Browsing**: Fluid tab management with throttling, closed-tab restore stack, and maximum safety limits.
+- 🔒 **Isolated Private Mode**: Strict in-memory session isolation (`MemoryHttpCache`, `NoPersistentCookies`) preventing disk leaks.
+- 🎨 **Rich Theme Support**: Dark, Light, Blue, Nord, and Dracula themes with live preview and custom styling.
+- 🌓 **Web Dark Mode**: Intelligent smart contrast script injection for dark web reading without inverted images/media.
+- 🔍 **Smart Search Engine Switcher**: Quick switching between Google, Bing, DuckDuckGo, YouTube, and Wikipedia.
+- 📥 **Real-Time Download Manager**: Accurate speed metrics in KB/s and MB/s, ETA estimation, folder navigation, and error handling.
+- ⭐ **Organized Bookmarks Toolbar**: Sorted bookmark entries, right-click context menu, and full Undo/Redo stack.
+- 📜 **Searchable History**: Fast indexed filtering, individual item removal, and debounced disk persistence.
+- 🛡️ **Security & Validation**: Local filesystem path safety checking (protecting sensitive OS files) and sanitization.
+- 🧰 **Developer Console & DevTools**: Integrated QWebEngine developer console and status/action logger.
 
 ---
 
-## 📸 Live Preview
-
-You can preview a working concept or similar styling from the web version by downloading the `.exe` file below:  
-👉 [**View Demo Layout**](https://github.com/syogesh999/Fibrowser/releases/tag/V1.1.0)
-
-> **Note:** The demo may represent a different project layout. **Fibrowser Pro** is a **desktop-only** application built using **PyQt5**.
-
----
-
-## 📦 File Structure
+## 📦 Project Structure
 
 ```text
 Fibrowser/
-├── assets/           # Icons, images, styles (optional)
-├── main.py           # Entry point
-├── README.md         # You're reading it 📘
-└── requirements.txt  # Required packages (PyQt5, etc.)
+├── assets/                  # Icons and visual assets
+│   └── icons/
+├── fibrowser/               # Core application package
+│   ├── config.py            # Themes, dimensions, and path security
+│   ├── main.py              # Application runner and global error hook
+│   ├── core/                # Web engine integration
+│   │   └── page.py          # BrowserPage with SSL & fullscreen handlers
+│   └── ui/                  # UI components and dialogs
+│       ├── window.py        # MainWindow coordinator
+│       ├── tab.py           # Tab component
+│       ├── widgets.py       # AnimatedButton & ToastNotification
+│       ├── downloads.py     # DownloadManager & progress tracking
+│       ├── shortcut_manager.py # Centralized keyboard shortcut manager
+│       ├── theme_manager.py    # Dynamic stylesheet generator
+│       └── dialogs/
+│           ├── settings_dialog.py # Preferences and cache controls
+│           └── history_dialog.py  # Searchable history manager
+├── tests/                   # Automated unit test suite
+│   ├── test_config.py
+│   ├── test_downloads.py
+│   ├── test_page_security.py
+│   ├── test_shortcuts.py
+│   ├── test_theme.py
+│   └── test_window_core.py
+├── .env.example             # Environment configuration template
+├── main.py                  # Root entry point wrapper
+├── pyproject.toml           # PEP 517/518 build definition
+└── requirements.txt         # Runtime dependencies
 ```
 
 ---
@@ -44,7 +59,7 @@ Fibrowser/
 
 ### ✅ Prerequisites
 
-- Python 3.7+
+- Python 3.8+
 - pip
 
 ### 📦 Install Dependencies
@@ -53,68 +68,58 @@ Fibrowser/
 pip install PyQt5 PyQtWebEngine
 ```
 
-### 🔄 Clone the Repository
-
-```bash
-git clone https://github.com/syogesh999/Fibrowser.git
-cd Fibrowser
-```
-
 ### ▶️ Run the App
 
 ```bash
 python main.py
 ```
 
+### 🧪 Run Automated Tests
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
 ---
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut              | Action                  |
-|-----------------------|-------------------------|
-| Ctrl + T              | New Tab                 |
-| Ctrl + W              | Close Tab               |
-| Ctrl + Tab            | Next Tab                |
-| Ctrl + Shift + Tab    | Previous Tab            |
-| Ctrl + L              | Focus URL bar           |
-| F5                    | Refresh page            |
-| Ctrl + H              | Show History (stub)     |
-| F12                   | Toggle Developer Tools  |
+| Shortcut | Action |
+|---|---|
+| `Ctrl + T` | New Tab |
+| `Ctrl + W` | Close Tab |
+| `Ctrl + Tab` | Next Tab |
+| `Ctrl + Shift + Tab` | Previous Tab |
+| `Ctrl + Shift + T` | Reopen Closed Tab |
+| `Ctrl + L` | Focus URL / Address Bar |
+| `F5` | Refresh Page |
+| `Ctrl + Shift + R` | Hard Refresh (Bypass Cache) |
+| `Ctrl + H` | Open Browsing History |
+| `Ctrl + B` | Toggle Bookmarks Toolbar |
+| `Ctrl + J` | Open Downloads Manager |
+| `Ctrl + Shift + P` | Toggle Private Browsing Mode |
+| `Ctrl + F` | Find in Page |
+| `F11` | Toggle Fullscreen |
+| `F12` | Toggle Developer Tools |
+| `Ctrl + =` / `Ctrl + -` | Zoom In / Zoom Out |
+| `Ctrl + 0` | Reset Zoom (100%) |
+| `Ctrl + Z` | Undo Bookmark Action |
 
 ---
 
 ## 🎨 Theme Support
 
-Choose from:
+Choose from 5 curated themes:
+- **Dark** (Default)
+- **Light**
+- **Blue**
+- **Nord**
+- **Dracula**
 
-- 🌞 Light  
-- 🌚 Dark *(default)*  
-- 🔷 Blue  
-
-Access via right-click context menu or internal settings.
+Switch themes in **Settings (⚙️)** with live preview, or right-click any empty area of the window.
 
 ---
 
 ## 🧾 License
 
 This project is open-source and available under the **MIT License**.
-
----
-
-## 🙌 Contributions
-
-Pull requests, issues, and feedback are welcome!  
-Feel free to open an issue or submit a PR.
-
----
-
-## 📫 Contact
-
-For feedback, collaboration, or inquiries:  
-**Yogesh S – [GitHub Profile](https://github.com/syogesh999)**
-
----
-
-```
-
-Let me know if you'd like to add a screenshot, logo, or badges at the top — I can help format those too!

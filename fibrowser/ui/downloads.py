@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List
+from typing import List, Optional, Any
 from PyQt5.QtCore import Qt, QUrl, QDateTime
 from PyQt5.QtGui import QIcon, QFont, QDesktopServices
 from PyQt5.QtWebEngineWidgets import QWebEngineDownloadItem
@@ -11,13 +11,13 @@ from PyQt5.QtWidgets import (QWidget, QDialog, QHBoxLayout, QVBoxLayout, QLabel,
 logger = logging.getLogger(__name__)
 
 class DownloadItemWidget(QWidget):
-    """Custom widget for displaying download progress with action buttons and real-time speed"""
+    """Custom widget for displaying download progress with action buttons and real-time speed."""
     
-    def __init__(self, download_item: QWebEngineDownloadItem, parent=None):
-        """Initialize download widget
+    def __init__(self, download_item: QWebEngineDownloadItem, parent: Optional[QWidget] = None) -> None:
+        """Initialize download widget.
         
         Args:
-            download_item: QWebEngineDownloadItem object
+            download_item: QWebEngineDownloadItem object from Qt WebEngine
             parent: Parent widget
         """
         super().__init__(parent)
@@ -25,9 +25,9 @@ class DownloadItemWidget(QWidget):
         self.start_time: QDateTime = QDateTime.currentDateTime()
         self.window = parent.parent() if hasattr(parent, 'parent') else None
         
-        # Real-time speed track variables
-        self.last_bytes = 0
-        self.last_time = QDateTime.currentDateTime()
+        # Real-time speed tracking variables
+        self.last_bytes: int = 0
+        self.last_time: QDateTime = QDateTime.currentDateTime()
         
         layout = QHBoxLayout()
         layout.setContentsMargins(8, 4, 8, 4)
@@ -43,7 +43,9 @@ class DownloadItemWidget(QWidget):
         layout.addWidget(self.icon)
         
         # Filename
-        self.filename = QLabel(os.path.basename(download_item.path()))
+        raw_path = download_item.path() if hasattr(download_item, 'path') else ""
+        file_title = os.path.basename(raw_path) if raw_path else "download"
+        self.filename = QLabel(file_title)
         self.filename.setMinimumWidth(150)
         layout.addWidget(self.filename, 1)
         
@@ -56,12 +58,12 @@ class DownloadItemWidget(QWidget):
         
         # Speed label
         self.speed_label = QLabel("0 KB/s")
-        self.speed_label.setMinimumWidth(80)
+        self.speed_label.setMinimumWidth(85)
         layout.addWidget(self.speed_label)
         
         # Status label
         self.status_label = QLabel("Downloading...")
-        self.status_label.setMinimumWidth(80)
+        self.status_label.setMinimumWidth(85)
         layout.addWidget(self.status_label)
         
         # Folder button (Show in Folder) - hidden until complete
@@ -99,7 +101,7 @@ class DownloadItemWidget(QWidget):
         self.download.stateChanged.connect(self.update_state)
         
     def show_in_folder(self) -> None:
-        """Open the folder containing the downloaded file"""
+        """Open the folder containing the downloaded file."""
         path = self.download.path()
         if os.path.exists(path):
             folder = os.path.dirname(path)
@@ -108,7 +110,7 @@ class DownloadItemWidget(QWidget):
             QMessageBox.warning(self, "File Not Found", "The downloaded file could not be found.")
 
     def open_file(self) -> None:
-        """Open the downloaded file directly"""
+        """Open the downloaded file directly with default system handler."""
         path = self.download.path()
         if os.path.exists(path):
             QDesktopServices.openUrl(QUrl.fromLocalFile(path))
@@ -116,11 +118,11 @@ class DownloadItemWidget(QWidget):
             QMessageBox.warning(self, "File Not Found", "The downloaded file could not be found.")
         
     def update_progress(self, bytes_received: int, bytes_total: int) -> None:
-        """Update download progress
+        """Update download progress, calculate accurate speed in KB/s or MB/s, and estimate ETA.
         
         Args:
-            bytes_received: Bytes downloaded
-            bytes_total: Total bytes to download
+            bytes_received: Bytes downloaded so far
+            bytes_total: Total bytes expected
         """
         if bytes_total > 0:
             percent = int((bytes_received / bytes_total) * 100)
@@ -135,26 +137,29 @@ class DownloadItemWidget(QWidget):
                 if elapsed_ms >= 500 or self.last_bytes == 0:
                     bytes_diff = bytes_received - self.last_bytes
                     
-                    if elapsed_ms > 0:
-                        speed = bytes_diff / elapsed_ms  # KB/s
+                    if elapsed_ms > 0 and bytes_diff >= 0:
+                        # Convert bytes/ms to bytes/sec
+                        speed_bytes_sec = (bytes_diff / elapsed_ms) * 1000.0
                     else:
-                        speed = 0.0
+                        speed_bytes_sec = 0.0
                         
                     self.last_bytes = bytes_received
                     self.last_time = now
                     
-                    # Update speed label
-                    if speed >= 1024:
-                        self.speed_label.setText(f"{speed/1024:.1f} MB/s")
+                    speed_kb_sec = speed_bytes_sec / 1024.0
+                    
+                    # Update speed label with proper units
+                    if speed_kb_sec >= 1024.0:
+                        self.speed_label.setText(f"{speed_kb_sec / 1024.0:.1f} MB/s")
                     else:
-                        self.speed_label.setText(f"{speed:.1f} KB/s")
+                        self.speed_label.setText(f"{speed_kb_sec:.1f} KB/s")
                         
                     # Calculate ETA
-                    if speed > 0:
+                    if speed_bytes_sec > 0:
                         remaining_bytes = bytes_total - bytes_received
-                        remaining_seconds = remaining_bytes / (speed * 1024)
+                        remaining_seconds = remaining_bytes / speed_bytes_sec
                         if remaining_seconds > 60:
-                            eta = f"{int(remaining_seconds/60)}m {int(remaining_seconds%60)}s"
+                            eta = f"{int(remaining_seconds / 60)}m {int(remaining_seconds % 60)}s"
                         else:
                             eta = f"{int(remaining_seconds)}s"
                         self.status_label.setText(f"ETA: {eta}")
@@ -165,7 +170,7 @@ class DownloadItemWidget(QWidget):
                 self.speed_label.setText("--")
                 
     def update_state(self, state: QWebEngineDownloadItem.DownloadState) -> None:
-        """Update download state
+        """Update UI when download state transitions.
         
         Args:
             state: Download state enum
@@ -183,7 +188,8 @@ class DownloadItemWidget(QWidget):
             if not main_win and hasattr(self.parent(), 'parent') and self.parent().parent():
                 main_win = self.parent().parent()
             if main_win and hasattr(main_win, 'show_toast'):
-                main_win.show_toast(f"📥 Download Completed:\n{os.path.basename(self.download.path())}")
+                filename_display = os.path.basename(self.download.path())
+                main_win.show_toast(f"📥 Download Completed:\n{filename_display}")
         elif state == QWebEngineDownloadItem.DownloadCancelled:
             self.status_label.setText("✗ Cancelled")
             self.speed_label.setText("Cancelled")
@@ -192,12 +198,13 @@ class DownloadItemWidget(QWidget):
             self.open_btn.setVisible(False)
         elif state == QWebEngineDownloadItem.DownloadInterrupted:
             self.status_label.setText("✗ Interrupted")
+            self.speed_label.setText("Interrupted")
             self.cancel_btn.setEnabled(False)
             self.folder_btn.setVisible(False)
             self.open_btn.setVisible(False)
 
     def cancel_download(self) -> None:
-        """Cancel the active download"""
+        """Cancel the active download safely."""
         if self.download.state() == QWebEngineDownloadItem.DownloadInProgress:
             self.download.cancel()
             self.cancel_btn.setEnabled(False)
@@ -205,9 +212,14 @@ class DownloadItemWidget(QWidget):
             self.status_label.setText("✗ Cancelled")
 
 class DownloadManager(QDialog):
-    """Enhanced download manager window with better UI and features"""
+    """Enhanced download manager window with list view, statistics, and item lifecycle."""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """Initialize download manager dialog.
+        
+        Args:
+            parent: Parent window widget
+        """
         super().__init__(parent)
         self.setWindowTitle("📥 Downloads")
         self.setMinimumSize(750, 450)
@@ -260,7 +272,7 @@ class DownloadManager(QDialog):
         self.downloads: List[DownloadItemWidget] = []
         
     def add_download(self, download_item: QWebEngineDownloadItem) -> None:
-        """Add a new download to the manager
+        """Add a new download item to the manager.
         
         Args:
             download_item: QWebEngineDownloadItem object
@@ -274,12 +286,12 @@ class DownloadManager(QDialog):
         self.update_stats()
         
     def clear_completed(self) -> None:
-        """Remove completed downloads from the list and clean up memory"""
+        """Remove completed downloads from the list and clean up memory."""
         for i in range(self.download_list.count() - 1, -1, -1):
             item = self.download_list.item(i)
             widget = self.download_list.itemWidget(item)
-            if widget and widget.download.state() == QWebEngineDownloadItem.DownloadCompleted:
-                # Disconnect signals to prevent leaks
+            if widget and hasattr(widget, 'download') and widget.download.state() == QWebEngineDownloadItem.DownloadCompleted:
+                # Disconnect signals to prevent memory leaks
                 try:
                     widget.download.downloadProgress.disconnect(widget.update_progress)
                     widget.download.stateChanged.disconnect(widget.update_state)
@@ -292,7 +304,7 @@ class DownloadManager(QDialog):
         self.update_stats()
         
     def update_stats(self) -> None:
-        """Update download statistics display"""
-        active = sum(1 for w in self.downloads if w.download.state() == QWebEngineDownloadItem.DownloadInProgress)
-        completed = sum(1 for w in self.downloads if w.download.state() == QWebEngineDownloadItem.DownloadCompleted)
+        """Update download statistics display."""
+        active = sum(1 for w in self.downloads if hasattr(w, 'download') and w.download.state() == QWebEngineDownloadItem.DownloadInProgress)
+        completed = sum(1 for w in self.downloads if hasattr(w, 'download') and w.download.state() == QWebEngineDownloadItem.DownloadCompleted)
         self.stats_label.setText(f"{active} active • {completed} completed")
