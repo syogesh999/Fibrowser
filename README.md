@@ -25,6 +25,10 @@ Fibrowser Pro is a sleek, modern, and feature-rich desktop **web browser** built
 Fibrowser/
 ├── assets/                  # Icons and visual assets
 │   └── icons/
+├── docs/                    # Technical documentation & audit reports
+│   ├── APP_OVERVIEW.md
+│   ├── AUDIT_REPORT.md
+│   └── FIXES_IMPLEMENTED.md
 ├── fibrowser/               # Core application package
 │   ├── config.py            # Themes, dimensions, and path security
 │   ├── main.py              # Application runner and global error hook
@@ -40,6 +44,10 @@ Fibrowser/
 │       └── dialogs/
 │           ├── settings_dialog.py # Preferences and cache controls
 │           └── history_dialog.py  # Searchable history manager
+├── scripts/                 # Build and release automation scripts
+│   ├── build.bat
+│   ├── build.ps1
+│   └── release.bat
 ├── tests/                   # Automated unit test suite
 │   ├── test_config.py
 │   ├── test_downloads.py
@@ -50,6 +58,7 @@ Fibrowser/
 ├── .env.example             # Environment configuration template
 ├── main.py                  # Root entry point wrapper
 ├── pyproject.toml           # PEP 517/518 build definition
+├── setup.py                 # Setuptools installer
 └── requirements.txt         # Runtime dependencies
 ```
 
@@ -79,6 +88,10 @@ python main.py
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
+
+### 🛠️ Packaging into Windows Executable
+
+Double-click `build.bat` (or run `scripts/build.bat`) to generate `dist/FibrowserPro.exe` and `dist/FibrowserPro-v2.0.0-windows-x64.zip`.
 
 ---
 
