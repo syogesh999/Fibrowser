@@ -1,6 +1,0 @@
-PyQt5>=5.15.9
-PyQtWebEngine>=5.15.7
-
-[dev]
-PyInstaller>=6.2.0
-python-dotenv>=1.0.0
