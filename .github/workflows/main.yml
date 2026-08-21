@@ -33,11 +33,12 @@ jobs:
 
       - name: 🏗️ Build executable with PyInstaller
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name "${{ env.APP_NAME }}" --add-data "assets;assets" ${{ env.MAIN_SCRIPT }}
+          pyinstaller --noconfirm --onefile --windowed --name "${{ env.APP_NAME }}" --icon "assets/icons/fibrowser.ico" --add-data "assets;assets" ${{ env.MAIN_SCRIPT }}
+          pyinstaller --noconfirm --onefile --windowed --name "FibrowserInstaller" --icon "assets/icons/fibrowser.ico" --add-data "assets;assets" installer.py
 
       - name: 📦 Create ZIP Archive
         run: |
-          Compress-Archive -Path dist\FibrowserPro.exe -DestinationPath dist\FibrowserPro-windows-x64.zip -Force
+          Compress-Archive -Path dist\FibrowserPro.exe, dist\FibrowserInstaller.exe -DestinationPath dist\FibrowserPro-windows-x64.zip -Force
 
       - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -45,6 +46,7 @@ jobs:
           name: FibrowserPro-release-binaries
           path: |
             dist/FibrowserPro.exe
+            dist/FibrowserInstaller.exe
             dist/FibrowserPro-windows-x64.zip
 
   release:
@@ -67,6 +69,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: |
             dist/FibrowserPro.exe
+            dist/FibrowserInstaller.exe
             dist/FibrowserPro-windows-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

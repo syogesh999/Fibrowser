@@ -8,7 +8,8 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QStyle
 
 # Application Metadata & Dimension Constants
-DEFAULT_HOME_PAGE = "https://www.bing.com"
+DEFAULT_HOME_PAGE = "https://www.msn.com"
+DEFAULT_SEARCH_ENGINE = "Google"
 APP_NAME = "Fibrowser Pro"
 APP_VERSION = "2.0.0"
 WINDOW_MIN_WIDTH = 1000
@@ -114,6 +115,9 @@ THEMES: Dict[str, Theme] = {
 
 # Standard icon fallback dictionary mapping icon names to Qt StandardPixmaps
 ICON_FALLBACK_MAP = {
+    "fibrowser.ico": QStyle.SP_ComputerIcon,
+    "fibrowser.png": QStyle.SP_ComputerIcon,
+    "favicon.png": QStyle.SP_ComputerIcon,
     "back_icon.png": QStyle.SP_ArrowBack,
     "next_icon.png": QStyle.SP_ArrowForward,
     "refresh_icon.png": QStyle.SP_BrowserReload,
@@ -124,7 +128,6 @@ ICON_FALLBACK_MAP = {
     "private_icon.png": QStyle.SP_FileDialogEnd,
     "settings_icon.png": QStyle.SP_FileDialogDetailedView,
     "web_dark_icon.png": QStyle.SP_DesktopIcon,
-    "favicon.png": QStyle.SP_ComputerIcon,
 }
 
 def get_resource_path(relative_path: str) -> str:

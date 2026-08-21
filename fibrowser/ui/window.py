@@ -13,17 +13,17 @@ from PyQt5.QtWebEngineWidgets import (QWebEngineView, QWebEngineProfile,
                                       QWebEngineDownloadItem, QWebEnginePage)
 from PyQt5.QtWidgets import (QMainWindow, QStatusBar, QToolBar, QAction, 
                              QLineEdit, QTabWidget, QWidget, QVBoxLayout, QPushButton,
-                             QMenu, QHBoxLayout, QLabel, QDialog,
+                             QMenu, QHBoxLayout, QLabel, QDialog, QApplication,
                              QFileDialog, QProgressBar, QStyle, QShortcut, QToolButton,
                              QListWidget, QListWidgetItem, QComboBox, QCheckBox, QFormLayout,
                              QMessageBox, QPlainTextEdit, QSplitter)
 
 # Local package imports
-from fibrowser.config import (DEFAULT_HOME_PAGE, APP_NAME, APP_VERSION, WINDOW_MIN_WIDTH, 
-                              WINDOW_MIN_HEIGHT, SEARCH_ENGINES, THEMES, MAX_TABS, 
-                              TAB_THROTTLE_SECONDS, HISTORY_MAX_SIZE, HISTORY_SAVE_DEBOUNCE_MS,
-                              PROGRESS_BAR_HEIGHT, DEFAULT_ZOOM, LOG_FILE_NAME, 
-                              get_icon, format_error_message, is_safe_local_path)
+from fibrowser.config import (DEFAULT_HOME_PAGE, DEFAULT_SEARCH_ENGINE, APP_NAME, APP_VERSION, 
+                              WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, SEARCH_ENGINES, THEMES, 
+                              MAX_TABS, TAB_THROTTLE_SECONDS, HISTORY_MAX_SIZE, 
+                              HISTORY_SAVE_DEBOUNCE_MS, PROGRESS_BAR_HEIGHT, DEFAULT_ZOOM, 
+                              LOG_FILE_NAME, get_icon, format_error_message, is_safe_local_path)
 from fibrowser.ui.widgets import AnimatedButton, ToastNotification
 from fibrowser.ui.downloads import DownloadManager
 from fibrowser.ui.tab import Tab
@@ -31,6 +31,7 @@ from fibrowser.ui.shortcut_manager import ShortcutManager
 from fibrowser.ui.theme_manager import ThemeManager
 from fibrowser.ui.dialogs.settings_dialog import SettingsDialog
 from fibrowser.ui.dialogs.history_dialog import HistoryDialog
+from fibrowser.ui.dialogs.welcome_dialog import WelcomeDialog
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,10 @@ class Window(QMainWindow):
         # Window configuration
         self.setWindowTitle(f"{APP_NAME} v{APP_VERSION}")
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
-        self.setWindowIcon(get_icon("favicon.png", QStyle.SP_ComputerIcon))
+        try:
+            self.setWindowIcon(get_icon("fibrowser.ico", QStyle.SP_ComputerIcon))
+        except Exception:
+            self.setWindowIcon(get_icon("fibrowser.png", QStyle.SP_ComputerIcon))
         
         # Storage directory and file paths
         self.config_dir: Path = Path(os.path.expanduser("~")) / ".fibrowser"
@@ -59,7 +63,7 @@ class Window(QMainWindow):
         self.homepage: str = DEFAULT_HOME_PAGE
         self.current_theme: str = "Dark"
         self.is_private_mode: bool = False
-        self.current_engine: str = "Google"
+        self.current_engine: str = DEFAULT_SEARCH_ENGINE
         self.bookmarks: Dict[str, str] = {}
         self.bookmarks_history: List[Dict[str, str]] = []
         self.bookmarks_future: List[Dict[str, str]] = []
@@ -69,6 +73,7 @@ class Window(QMainWindow):
         self.default_zoom: float = DEFAULT_ZOOM
         self.js_enabled: bool = True
         self.clear_on_exit: bool = False
+        self.first_run_completed: bool = False
         self._private_profile: Optional[QWebEngineProfile] = None
         self._last_tab_create_time: float = 0.0
         self._history_save_timer: Optional[QTimer] = None
@@ -93,19 +98,24 @@ class Window(QMainWindow):
         # Register global download listener
         QWebEngineProfile.defaultProfile().downloadRequested.connect(self.on_download_requested)
         
+        # Check first run experience
+        if not self.first_run_completed:
+            QTimer.singleShot(400, self.show_welcome_dialog)
+            
         logger.info(f"{APP_NAME} v{APP_VERSION} started")
         self.log_action("🚀 Browser started successfully")
+
+    def show_welcome_dialog(self) -> None:
+        """Display first-run welcome dialog to configure initial preferences."""
+        dialog = WelcomeDialog(self, self)
+        dialog.exec_()
 
     def get_private_profile(self) -> QWebEngineProfile:
         """Get or create the off-the-record profile for private browsing with strict memory isolation."""
         if not self._private_profile:
-            # Create off-the-record profile (no storage name = off-the-record)
             self._private_profile = QWebEngineProfile(self)
-            
-            # Explicitly enforce memory-only cache and zero persistent cookies (HIGH-003)
             self._private_profile.setHttpCacheType(QWebEngineProfile.MemoryHttpCache)
             self._private_profile.setPersistentCookiesPolicy(QWebEngineProfile.NoPersistentCookies)
-            
             self._private_profile.downloadRequested.connect(self.on_download_requested)
             
             settings = self._private_profile.settings()
@@ -127,21 +137,23 @@ class Window(QMainWindow):
     def _load_settings(self) -> None:
         """Load browser settings from config file with error recovery."""
         self.homepage = DEFAULT_HOME_PAGE
-        self.current_engine = "Google"
+        self.current_engine = DEFAULT_SEARCH_ENGINE
         self.current_theme = "Dark"
         self.default_zoom = DEFAULT_ZOOM
         self.js_enabled = True
         self.clear_on_exit = False
+        self.first_run_completed = False
         try:
             if self.settings_file.exists():
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.homepage = data.get("homepage", DEFAULT_HOME_PAGE)
-                    self.current_engine = data.get("search_engine", "Google")
+                    self.current_engine = data.get("search_engine", DEFAULT_SEARCH_ENGINE)
                     self.current_theme = ThemeManager.validate_theme_name(data.get("theme", "Dark"))
                     self.default_zoom = float(data.get("default_zoom", DEFAULT_ZOOM))
                     self.js_enabled = bool(data.get("javascript_enabled", True))
                     self.clear_on_exit = bool(data.get("clear_on_exit", False))
+                    self.first_run_completed = bool(data.get("first_run_completed", False))
         except (json.JSONDecodeError, ValueError, OSError) as e:
             logger.error(f"Corrupted settings file, resetting to defaults: {e}")
             self._recover_corrupted_file(self.settings_file)
@@ -156,7 +168,8 @@ class Window(QMainWindow):
                 "theme": self.current_theme,
                 "default_zoom": self.default_zoom,
                 "javascript_enabled": self.js_enabled,
-                "clear_on_exit": self.clear_on_exit
+                "clear_on_exit": self.clear_on_exit,
+                "first_run_completed": self.first_run_completed
             }
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
@@ -284,12 +297,14 @@ class Window(QMainWindow):
         self.home_btn.setToolTip("Home (Alt+Home)")
         self.home_btn.clicked.connect(self.go_to_home)
         
-        # Address bar
+        # Address bar with custom context menu
         self.URLBar = QLineEdit()
-        self.URLBar.setPlaceholderText("🔍 Search or enter URL...")
+        self.URLBar.setPlaceholderText("🔍 Search Google or enter URL (e.g. msn.com, calc 25*25)...")
         self.URLBar.returnPressed.connect(self.load_url)
         self.URLBar.setClearButtonEnabled(True)
         self.URLBar.setMaximumHeight(36)
+        self.URLBar.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.URLBar.customContextMenuRequested.connect(self._show_urlbar_context_menu)
         
         # Search engine selector
         self.search_combo = QComboBox()
@@ -346,6 +361,36 @@ class Window(QMainWindow):
         self.nav_toolbar.addWidget(self.web_dark_btn)
         self.nav_toolbar.addWidget(self.settings_btn)
 
+    def _show_urlbar_context_menu(self, pos: QPoint) -> None:
+        """Show extended context menu with Paste & Go, Paste & Search, Copy URL."""
+        menu = self.URLBar.createStandardContextMenu()
+        menu.addSeparator()
+        
+        paste_go_act = menu.addAction("📋 Paste and Go")
+        paste_search_act = menu.addAction("🔍 Paste and Search")
+        copy_url_act = menu.addAction("🔗 Copy Current Page URL")
+        
+        clipboard = QApplication.clipboard()
+        clip_text = clipboard.text().strip()
+        
+        paste_go_act.setEnabled(bool(clip_text))
+        paste_search_act.setEnabled(bool(clip_text))
+        
+        action = menu.exec_(self.URLBar.mapToGlobal(pos))
+        if action == paste_go_act and clip_text:
+            self.URLBar.setText(clip_text)
+            self.load_url()
+        elif action == paste_search_act and clip_text:
+            template = SEARCH_ENGINES.get(self.current_engine, SEARCH_ENGINES["Google"])
+            search_url = template.format(urllib.parse.quote_plus(clip_text))
+            self.URLBar.setText(search_url)
+            self.navigate_to(search_url)
+        elif action == copy_url_act:
+            current = self.current_tab()
+            if current and hasattr(current, 'browser'):
+                clipboard.setText(current.browser.url().toString())
+                self.show_toast("🔗 URL copied to clipboard")
+
     def _create_bookmarks_toolbar(self) -> None:
         """Create bookmarks toolbar."""
         self.bookmarks_toolbar = QToolBar('Bookmarks')
@@ -355,6 +400,7 @@ class Window(QMainWindow):
         
         default_bookmarks = {
             "🔍 Google": "https://www.google.com",
+            "📰 MSN": "https://www.msn.com",
             "📺 YouTube": "https://www.youtube.com",
             "💻 GitHub": "https://github.com",
             "📚 StackOverflow": "https://stackoverflow.com",
@@ -370,7 +416,6 @@ class Window(QMainWindow):
         for action in self.bookmarks_toolbar.actions():
             self.bookmarks_toolbar.removeAction(action)
         
-        # Add sorted bookmark buttons (MED-005)
         for name in sorted(self.bookmarks.keys()):
             url = self.bookmarks[name]
             btn = QPushButton(name)
@@ -395,12 +440,12 @@ class Window(QMainWindow):
         add_bookmark_btn.clicked.connect(self._add_current_bookmark)
         self.bookmarks_toolbar.addWidget(add_bookmark_btn)
         
-        # Undo button if undo stack is not empty (MED-007)
+        # Undo button if undo stack is not empty
         if self.bookmarks_history:
             undo_btn = QPushButton("↩️ Undo")
             undo_btn.setCursor(Qt.PointingHandCursor)
             undo_btn.setFlat(True)
-            undo_btn.setToolTip("Undo bookmark change")
+            undo_btn.setToolTip("Undo bookmark change (Ctrl+Z)")
             undo_btn.clicked.connect(self.undo_bookmark_action)
             self.bookmarks_toolbar.addWidget(undo_btn)
 
@@ -419,7 +464,7 @@ class Window(QMainWindow):
         menu.exec_(button.mapToGlobal(pos))
         
     def _delete_bookmark(self, name: str) -> None:
-        """Delete a bookmark with undo stack snapshot (MED-007)."""
+        """Delete a bookmark with undo stack snapshot."""
         if name in self.bookmarks:
             self.bookmarks_history.append(self.bookmarks.copy())
             self.bookmarks_future.clear()
@@ -429,7 +474,7 @@ class Window(QMainWindow):
             self.log_action(f"🗑️ Bookmark deleted: {name}")
 
     def undo_bookmark_action(self) -> None:
-        """Undo last bookmark action (MED-007)."""
+        """Undo last bookmark action."""
         if self.bookmarks_history:
             self.bookmarks_future.append(self.bookmarks.copy())
             self.bookmarks = self.bookmarks_history.pop()
@@ -439,7 +484,7 @@ class Window(QMainWindow):
             self.show_toast("Restored previous bookmarks")
 
     def redo_bookmark_action(self) -> None:
-        """Redo last undone bookmark action (MED-007)."""
+        """Redo last undone bookmark action."""
         if self.bookmarks_future:
             self.bookmarks_history.append(self.bookmarks.copy())
             self.bookmarks = self.bookmarks_future.pop()
@@ -449,13 +494,17 @@ class Window(QMainWindow):
             self.show_toast("Reapplied bookmarks")
 
     def _create_tabs(self) -> None:
-        """Create tab widget."""
+        """Create tab widget with custom context menu for tab management."""
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
         self.tabs.setElideMode(Qt.ElideRight)
         self.tabs.tabCloseRequested.connect(self.close_tab)
         self.tabs.currentChanged.connect(self.tab_changed)
+        
+        # Right-click context menu on tabs
+        self.tabs.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabs.customContextMenuRequested.connect(self._show_tab_context_menu)
         
         self.new_tab_btn = QToolButton()
         self.new_tab_btn.setText("➕")
@@ -465,14 +514,90 @@ class Window(QMainWindow):
         self.new_tab_btn.clicked.connect(lambda: self.add_new_tab())
         self.tabs.setCornerWidget(self.new_tab_btn, Qt.TopRightCorner)
 
+    def _show_tab_context_menu(self, pos: QPoint) -> None:
+        """Show rich tab context menu on right clicking tabs."""
+        tab_index = self.tabs.tabBar().tabAt(pos)
+        if tab_index == -1:
+            return
+            
+        tab = self.tabs.widget(tab_index)
+        menu = QMenu(self)
+        
+        dup_act = menu.addAction("📑 Duplicate Tab")
+        
+        is_pinned = getattr(tab, 'is_pinned', False)
+        pin_act = menu.addAction("📍 Unpin Tab" if is_pinned else "📌 Pin Tab")
+        
+        is_muted = getattr(tab, 'is_muted', False)
+        mute_act = menu.addAction("🔊 Unmute Tab" if is_muted else "🔇 Mute Tab")
+        
+        menu.addSeparator()
+        reload_act = menu.addAction("🔄 Reload Tab")
+        close_act = menu.addAction("🗙 Close Tab")
+        close_others_act = menu.addAction("🗙 Close Other Tabs")
+        close_right_act = menu.addAction("➡️ Close Tabs to the Right")
+        
+        if self.closed_tabs_stack:
+            menu.addSeparator()
+            reopen_act = menu.addAction("↩️ Reopen Closed Tab")
+        else:
+            reopen_act = None
+            
+        action = menu.exec_(self.tabs.mapToGlobal(pos))
+        if not action:
+            return
+            
+        if action == dup_act:
+            if hasattr(tab, 'browser'):
+                self.add_new_tab(tab.browser.url().toString(), is_private=getattr(tab, 'is_private', False))
+        elif action == pin_act:
+            if hasattr(tab, 'set_pinned'):
+                tab.set_pinned(not is_pinned)
+        elif action == mute_act:
+            if hasattr(tab, 'set_muted'):
+                tab.set_muted(not is_muted)
+        elif action == reload_act:
+            if hasattr(tab, 'browser'):
+                tab.browser.reload()
+        elif action == close_act:
+            self.close_tab(tab_index)
+        elif action == close_others_act:
+            self._close_other_tabs(tab_index)
+        elif action == close_right_act:
+            self._close_tabs_to_right(tab_index)
+        elif action == reopen_act:
+            self.reopen_closed_tab()
+
+    def _close_other_tabs(self, keep_index: int) -> None:
+        """Close all tabs except the specified index (preserving pinned tabs)."""
+        keep_widget = self.tabs.widget(keep_index)
+        for i in reversed(range(self.tabs.count())):
+            w = self.tabs.widget(i)
+            if w != keep_widget and not getattr(w, 'is_pinned', False):
+                self.close_tab(i)
+
+    def _close_tabs_to_right(self, from_index: int) -> None:
+        """Close all tabs to the right of the specified index."""
+        for i in reversed(range(from_index + 1, self.tabs.count())):
+            w = self.tabs.widget(i)
+            if not getattr(w, 'is_pinned', False):
+                self.close_tab(i)
+
+    def duplicate_current_tab(self) -> None:
+        """Duplicate currently active tab."""
+        current = self.current_tab()
+        if current and hasattr(current, 'browser'):
+            self.add_new_tab(current.browser.url().toString(), is_private=getattr(current, 'is_private', False))
+
     def _register_shortcuts(self) -> None:
-        """Register all keyboard shortcuts centrally using ShortcutManager (MED-002)."""
+        """Register all keyboard shortcuts centrally using ShortcutManager."""
         # Tab management
         self.shortcut_mgr.register("new_tab", "Ctrl+T", lambda: self.add_new_tab(), "Open a new tab")
         self.shortcut_mgr.register("close_tab", "Ctrl+W", self.close_current_tab, "Close current tab")
         self.shortcut_mgr.register("next_tab", "Ctrl+Tab", self.next_tab, "Switch to next tab")
         self.shortcut_mgr.register("prev_tab", "Ctrl+Shift+Tab", self.previous_tab, "Switch to previous tab")
         self.shortcut_mgr.register("reopen_tab", "Ctrl+Shift+T", self.reopen_closed_tab, "Reopen closed tab")
+        self.shortcut_mgr.register("dup_tab", "Ctrl+K", self.duplicate_current_tab, "Duplicate current tab")
         
         # Navigation
         self.shortcut_mgr.register("focus_url", "Ctrl+L", self.focus_address_bar, "Focus address bar")
@@ -482,6 +607,11 @@ class Window(QMainWindow):
         self.shortcut_mgr.register("nav_back", "Alt+Left", self.navigate_back, "Navigate back")
         self.shortcut_mgr.register("nav_forward", "Alt+Right", self.navigate_forward, "Navigate forward")
         self.shortcut_mgr.register("nav_home", "Alt+Home", self.go_to_home, "Go to home")
+        
+        # Page Actions
+        self.shortcut_mgr.register("view_source", "Ctrl+U", self.view_page_source, "View page source")
+        self.shortcut_mgr.register("save_page", "Ctrl+S", self.save_page_as, "Save page as HTML")
+        self.shortcut_mgr.register("print_page", "Ctrl+P", self.print_page, "Print page to PDF")
         
         # Features & Windows
         self.shortcut_mgr.register("show_downloads", "Ctrl+J", self.show_downloads, "Show download manager")
@@ -496,23 +626,53 @@ class Window(QMainWindow):
         self.shortcut_mgr.register("hide_find", "Esc", self.hide_find_bar, "Hide find bar")
         self.shortcut_mgr.register("undo_bookmark", "Ctrl+Z", self.undo_bookmark_action, "Undo bookmark change")
 
+    def view_page_source(self) -> None:
+        """Open current page HTML source code in a reader dialog."""
+        current = self.current_tab()
+        if current and hasattr(current, 'browser'):
+            current.browser.page().toHtml(self._display_source_code)
+
+    def _display_source_code(self, html: str) -> None:
+        """Display source code dialog."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Page Source Viewer")
+        dialog.setWindowIcon(get_icon("fibrowser.ico"))
+        dialog.resize(850, 600)
+        layout = QVBoxLayout(dialog)
+        edit = QPlainTextEdit(dialog)
+        edit.setReadOnly(True)
+        edit.setPlainText(html)
+        edit.setStyleSheet("font-family: Consolas, monospace; font-size: 13px;")
+        layout.addWidget(edit)
+        dialog.exec_()
+
+    def save_page_as(self) -> None:
+        """Save current page as HTML file."""
+        current = self.current_tab()
+        if not current or not hasattr(current, 'browser'):
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Save Page As", "page.html", "HTML Files (*.html *.htm);;All Files (*)")
+        if path:
+            current.browser.page().save(path, QWebEnginePage.SingleHtmlSaveFormat)
+            self.show_toast(f"Page saved to {os.path.basename(path)}")
+
+    def print_page(self) -> None:
+        """Print current page to PDF file."""
+        current = self.current_tab()
+        if not current or not hasattr(current, 'browser'):
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Print to PDF", "document.pdf", "PDF Files (*.pdf)")
+        if path:
+            current.browser.page().printToPdf(path)
+            self.show_toast(f"Page exported as PDF to {os.path.basename(path)}")
+
     def add_new_tab(self, url: Optional[str] = None, is_private: bool = False) -> Optional[Tab]:
-        """Add a new browser tab with rate-limiting and maximum tab guard (HIGH-007).
-        
-        Args:
-            url: Optional URL to load in the new tab
-            is_private: True to open tab in Private Mode
-            
-        Returns:
-            The newly created Tab instance or None if throttled/capped
-        """
-        # Guard max tabs
+        """Add a new browser tab with rate-limiting and maximum tab guard."""
         if self.tabs.count() >= MAX_TABS:
             self.show_toast(f"Maximum tab limit reached ({MAX_TABS} tabs)")
             logger.warning(f"Tab creation rejected: maximum limit ({MAX_TABS}) reached")
             return None
             
-        # Guard tab creation throttling (minimum 100ms interval)
         now = time.time()
         if now - self._last_tab_create_time < TAB_THROTTLE_SECONDS:
             return None
@@ -555,7 +715,7 @@ class Window(QMainWindow):
             self.tabs.removeTab(index)
             if tab:
                 tab.deleteLater()
-            self.log_action(f"🗙 Tab closed")
+            self.log_action("🗙 Tab closed")
         else:
             self.close()
 
@@ -638,64 +798,95 @@ class Window(QMainWindow):
             self.current_tab().browser.setUrl(QUrl(self.homepage))
 
     def load_url(self) -> None:
-        """Load URL from address bar with input sanitization and local file protection (CRIT-003, HIGH-001)."""
+        """Load URL from address bar with input sanitization, math evaluator, and quick commands."""
         if not self.current_tab():
             return
             
-        text = self.URLBar.text().strip()
-        if not text:
+        raw_text = self.URLBar.text().strip()
+        if not raw_text:
             return
         
+        # 1. Quick Math Calculation check (e.g. "calc 25 * 25" or "= 10 + 5")
+        math_expr = None
+        if raw_text.startswith("calc "):
+            math_expr = raw_text[5:].strip()
+        elif raw_text.startswith("= "):
+            math_expr = raw_text[2:].strip()
+        elif raw_text.startswith("=") and len(raw_text) > 1:
+            math_expr = raw_text[1:].strip()
+            
+        if math_expr:
+            try:
+                allowed = set("0123456789+-*/().% ")
+                if all(c in allowed for c in math_expr):
+                    result = eval(math_expr, {"__builtins__": None}, {})
+                    self.show_toast(f"🧮 Result: {result}")
+                    self.log_action(f"Calculator: {math_expr} = {result}")
+                    return
+            except Exception as e:
+                self.show_toast(f"Calculation Error: {e}")
+                return
+
+        # 2. Quick Command shortcuts
+        cmd_lower = raw_text.lower()
+        if cmd_lower in ("open settings", "settings"):
+            self.show_settings()
+            return
+        elif cmd_lower in ("open downloads", "downloads"):
+            self.show_downloads()
+            return
+        elif cmd_lower in ("open history", "history"):
+            self.show_history()
+            return
+        elif cmd_lower in ("open bookmarks", "bookmarks"):
+            self.toggle_bookmarks_bar()
+            return
+
+        # 3. Standard URL Navigation or Search Query
         try:
-            # Check if it looks like a local file path
             is_local_file = False
-            if os.path.isabs(text) or (len(text) > 1 and text[1] == ':' and text[0].isalpha()):
+            if os.path.isabs(raw_text) or (len(raw_text) > 1 and raw_text[1] == ':' and raw_text[0].isalpha()):
                 is_local_file = True
                 
-                # Check sensitive system file access security rule (CRIT-003)
-                if not is_safe_local_path(text):
-                    logger.warning(f"Blocked attempt to access sensitive system path: {text}")
-                    self.log_action(f"⛔ Access blocked: Protected system file")
+                if not is_safe_local_path(raw_text):
+                    logger.warning(f"Blocked attempt to access sensitive system path: {raw_text}")
+                    self.log_action("⛔ Access blocked: Protected system file")
                     QMessageBox.critical(self, "Security Restriction", 
-                        f"Access to sensitive system file is blocked:\n{text}")
+                        f"Access to sensitive system file is blocked:\n{raw_text}")
                     return
                     
-                # Check file existence (CRIT-003)
-                if not os.path.exists(text):
-                    logger.warning(f"Local file does not exist: {text}")
-                    self.log_action(f"❌ File not found: {text}")
-                    self.show_toast(f"File not found:\n{os.path.basename(text)}")
+                if not os.path.exists(raw_text):
+                    logger.warning(f"Local file does not exist: {raw_text}")
+                    self.log_action(f"❌ File not found: {raw_text}")
+                    self.show_toast(f"File not found:\n{os.path.basename(raw_text)}")
                     return
                     
-                url = QUrl.fromLocalFile(text)
+                url = QUrl.fromLocalFile(raw_text)
             else:
-                # Check if it's a search query or URL
                 is_search = False
-                if ' ' in text:
+                if ' ' in raw_text:
                     is_search = True
-                elif text.startswith(('http://', 'https://', 'file://', 'view-source:', 'about:')):
+                elif raw_text.startswith(('http://', 'https://', 'file://', 'view-source:', 'about:')):
                     is_search = False
-                elif '.' in text and not text.endswith('.'):
+                elif '.' in raw_text and not raw_text.endswith('.'):
                     is_search = False
                 else:
                     is_search = True
                     
                 if is_search:
-                    # Sanitize search query with quote_plus (HIGH-001)
-                    encoded_query = urllib.parse.quote_plus(text)
+                    encoded_query = urllib.parse.quote_plus(raw_text)
                     engine_template = SEARCH_ENGINES.get(self.current_engine, SEARCH_ENGINES["Google"])
                     search_url = engine_template.format(encoded_query)
                     url = QUrl(search_url)
                 else:
-                    if not text.startswith(('http://', 'https://', 'file://', 'view-source:', 'about:')):
-                        text = 'https://' + text
-                    url = QUrl(text)
+                    if not raw_text.startswith(('http://', 'https://', 'file://', 'view-source:', 'about:')):
+                        raw_text = 'https://' + raw_text
+                    url = QUrl(raw_text)
             
-            # Verify URL validity
             if not url.isValid():
                 err_msg = format_error_message(url)
                 self.log_action(f"❌ {err_msg}")
-                self.show_toast(f"Invalid URL: {text[:40]}")
+                self.show_toast(f"Invalid URL: {raw_text[:40]}")
                 return
                 
             self.current_tab().browser.setUrl(url)
@@ -752,27 +943,48 @@ class Window(QMainWindow):
     def reset_zoom(self) -> None:
         """Reset page zoom to 100%."""
         if self.current_tab():
-            self.current_tab().browser.setZoomFactor(1.0)
-            self.log_action("🔍 Zoom: 100%")
+            self.current_tab().browser.setZoomFactor(DEFAULT_ZOOM)
+            self.log_action("🔍 Zoom reset to 100%")
             if hasattr(self, 'zoom_indicator') and self.zoom_indicator:
                 self.zoom_indicator.setText("🔍 100%")
 
-    def show_downloads(self) -> None:
-        """Show download manager window."""
-        self.download_manager.show()
-        self.download_manager.raise_()
-        self.download_manager.activateWindow()
+    def show_find_bar(self) -> None:
+        """Display page search find bar."""
+        self.find_bar.setVisible(True)
+        self.find_input.setFocus()
+        self.find_input.selectAll()
 
-    def show_settings(self) -> None:
-        """Show settings dialog using modularized SettingsDialog (CRIT-002)."""
-        dialog = SettingsDialog(self)
-        dialog.exec_()
+    def hide_find_bar(self) -> None:
+        """Hide find bar and clear search highlights."""
+        self.find_bar.setVisible(False)
+        if self.current_tab():
+            self.current_tab().browser.findText("")
+
+    def find_text(self, text: str) -> None:
+        """Search text in page content."""
+        if self.current_tab():
+            self.current_tab().browser.findText(text)
+
+    def find_next(self) -> None:
+        """Find next occurrence of text in page."""
+        if self.current_tab():
+            self.current_tab().browser.findText(self.find_input.text())
+
+    def toggle_fullscreen(self) -> None:
+        """Toggle window fullscreen display mode."""
+        if self.isFullScreen():
+            self.showNormal()
+            self.log_action("📺 Exited fullscreen")
+        else:
+            self.showFullScreen()
+            self.log_action("📺 Entered fullscreen")
 
     def toggle_bookmarks_bar(self) -> None:
-        """Toggle bookmarks toolbar visibility."""
-        visible = not self.bookmarks_toolbar.isVisible()
-        self.bookmarks_toolbar.setVisible(visible)
-        self.log_action(f"📚 Bookmarks {'shown' if visible else 'hidden'}")
+        """Toggle bookmarks bar visibility."""
+        is_visible = not self.bookmarks_toolbar.isVisible()
+        self.bookmarks_toolbar.setVisible(is_visible)
+        state_str = "shown" if is_visible else "hidden"
+        self.log_action(f"⭐ Bookmarks toolbar {state_str}")
 
     def toggle_private_mode(self) -> None:
         """Toggle private browsing mode."""
@@ -780,116 +992,190 @@ class Window(QMainWindow):
         self.private_indicator.setVisible(self.is_private_mode)
         
         if self.is_private_mode:
-            self.private_indicator.setStyleSheet("color: #d9534f; font-weight: bold;")
-            self.log_action("🔒 Private mode enabled - new tabs will browse privately")
+            self.private_btn.setStyleSheet("background-color: #d9534f; border-radius: 18px;")
+            self.show_toast("🔒 Private Browsing Enabled")
+            self.log_action("🔒 Switched to Private Mode")
         else:
-            self.private_indicator.setStyleSheet("")
-            self.log_action("🔒 Private mode disabled")
+            self.private_btn.setStyleSheet("")
+            self.show_toast("🔓 Private Browsing Disabled")
+            self.log_action("🔓 Switched to Normal Mode")
+            
+        self.add_new_tab(is_private=self.is_private_mode)
+
+    def toggle_dev_tools(self) -> None:
+        """Toggle embedded WebEngine developer console."""
+        if not hasattr(self, 'dev_tools_view'):
+            return
+            
+        is_visible = not self.dev_tools_view.isVisible()
+        self.dev_tools_view.setVisible(is_visible)
+        
+        current = self.current_tab()
+        if current and hasattr(current, 'browser'):
+            if is_visible:
+                current.browser.page().setDevToolsPage(self.dev_tools_view.page())
+                self.log_action("🛠️ DevTools opened")
+            else:
+                current.browser.page().setDevToolsPage(None)
+                self.log_action("🛠️ DevTools closed")
+
+    def toggle_web_dark_mode(self) -> None:
+        """Toggle smart Web Dark Mode CSS script injection across tabs."""
+        self.web_dark_mode_active = not self.web_dark_mode_active
+        
+        if self.web_dark_mode_active:
+            self.web_dark_btn.setStyleSheet("background-color: #4a148c; border-radius: 18px;")
+            self.show_toast("🌓 Web Dark Mode Enabled")
+            self.log_action("🌓 Web Dark Mode turned ON")
+            
+            # Apply to all currently open tabs
+            for i in range(self.tabs.count()):
+                tab = self.tabs.widget(i)
+                if tab and hasattr(tab, 'on_load_finished'):
+                    tab.on_load_finished(True)
+        else:
+            self.web_dark_btn.setStyleSheet("")
+            self.show_toast("☀️ Web Dark Mode Disabled")
+            self.log_action("☀️ Web Dark Mode turned OFF")
+            
+            # Remove dark stylesheet from all open tabs
+            js = """
+            (function() {
+                var el = document.getElementById('fibrowser-dark-mode');
+                if (el) el.remove();
+            })();
+            """
+            for i in range(self.tabs.count()):
+                tab = self.tabs.widget(i)
+                if tab and hasattr(tab, 'browser'):
+                    tab.browser.page().runJavaScript(js)
+
+    def show_settings(self) -> None:
+        """Show settings dialog."""
+        dialog = SettingsDialog(self, self)
+        dialog.exec_()
+
+    def show_history(self) -> None:
+        """Show browsing history dialog."""
+        dialog = HistoryDialog(self, self)
+        dialog.exec_()
+
+    def show_downloads(self) -> None:
+        """Show download manager dialog."""
+        self.download_manager.show_manager()
 
     def focus_address_bar(self) -> None:
-        """Set focus and select all text in address bar."""
+        """Focus and select all address bar text."""
         self.URLBar.setFocus()
         self.URLBar.selectAll()
 
-    def toggle_dev_tools(self) -> None:
-        """Toggle developer tools visibility."""
-        if not self.current_tab():
-            return
-        visible = not self.dev_tools_view.isVisible()
-        self.dev_tools_view.setVisible(visible)
-        if visible:
-            self.current_tab().browser.page().setDevToolsPage(self.dev_tools_view.page())
-        else:
-            self.current_tab().browser.page().setDevToolsPage(None)
-        self.log_action(f"👨‍💻 Dev Tools {'shown' if visible else 'hidden'}")
+    def apply_theme(self, theme_name: str) -> None:
+        """Apply custom CSS theme stylesheet."""
+        theme_name = ThemeManager.validate_theme_name(theme_name)
+        self.current_theme = theme_name
+        stylesheet = ThemeManager.generate_stylesheet(theme_name)
+        self.setStyleSheet(stylesheet)
+        self.log_action(f"🎨 Theme changed: {theme_name}")
 
-    def show_find_bar(self) -> None:
-        """Show Find in Page bar."""
-        self.find_bar.setVisible(True)
-        self.find_input.setFocus()
-        self.find_input.selectAll()
-
-    def hide_find_bar(self) -> None:
-        """Hide Find in Page bar."""
-        self.find_bar.setVisible(False)
-        if self.current_tab():
-            self.current_tab().browser.findText("")
-
-    def find_text(self, text: str) -> None:
-        """Find text in active page."""
-        if self.current_tab():
-            self.current_tab().browser.findText(text)
-
-    def find_next(self) -> None:
-        """Find next match in active page."""
-        if self.current_tab():
-            self.current_tab().browser.findText(self.find_input.text())
-
-    def toggle_fullscreen(self) -> None:
-        """Toggle fullscreen mode."""
-        if self.isFullScreen():
-            self.showNormal()
-            self.log_action("🔳 Exited Fullscreen")
-        else:
-            self.showFullScreen()
-            self.log_action("🔲 Entered Fullscreen (Press F11 to exit)")
-
-    def toggle_web_dark_mode(self) -> None:
-        """Toggle Web Dark Mode globally and apply clean CSS injection to all tabs (MED-001)."""
-        self.web_dark_mode_active = not self.web_dark_mode_active
-        mode_str = "Enabled" if self.web_dark_mode_active else "Disabled"
-        self.log_action(f"🌓 Web Dark Mode {mode_str}")
-        self.show_toast(f"Web Dark Mode {mode_str}")
+    def log_action(self, action: str) -> None:
+        """Record user action to status bar, console widget, and disk log file."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_entry = f"[{timestamp}] {action}"
         
-        if self.web_dark_mode_active:
-            self.web_dark_btn.setStyleSheet(f"background-color: {self.current_theme_color()}; border-radius: 18px;")
-        else:
-            self.web_dark_btn.setStyleSheet("")
+        if hasattr(self, 'status_label') and self.status_label:
+            self.status_label.setText(action[:60])
             
-        js_enable = """
-        (function() {
-            var el = document.getElementById('fibrowser-dark-mode');
-            if (!el) {
-                var style = document.createElement('style');
-                style.id = 'fibrowser-dark-mode';
-                style.innerHTML = `
-                    html { 
-                        filter: invert(0.92) hue-rotate(180deg) !important; 
-                        background-color: #121212 !important; 
-                    }
-                    img, video, canvas, iframe, picture, svg { 
-                        filter: invert(1.08) hue-rotate(180deg) !important; 
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        })();
-        """
-        js_disable = """
-        (function() {
-            var el = document.getElementById('fibrowser-dark-mode');
-            if (el) { el.remove(); }
-        })();
-        """
-        js = js_enable if self.web_dark_mode_active else js_disable
-        
-        for i in range(self.tabs.count()):
-            tab = self.tabs.widget(i)
-            if tab and hasattr(tab, 'browser'):
-                tab.browser.page().runJavaScript(js)
+        if hasattr(self, 'console') and self.console:
+            self.console.appendPlainText(log_entry)
+            
+        try:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(f"{log_entry}\n")
+        except Exception:
+            pass
 
-    def show_history(self) -> None:
-        """Show browsing history dialog using modularized HistoryDialog (CRIT-002, MED-008)."""
-        dialog = HistoryDialog(self)
-        dialog.exec_()
+    def add_to_history(self, url: str) -> None:
+        """Add URL to browsing history and schedule debounced save."""
+        current = self.current_tab()
+        if current and getattr(current, 'is_private', False):
+            return
+            
+        if self.is_private_mode:
+            return
+            
+        if url and url != "about:blank":
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            entry = f"[{timestamp}] {url}"
+            self.history.insert(0, entry)
+            
+            if len(self.history) > HISTORY_MAX_SIZE:
+                self.history = self.history[:HISTORY_MAX_SIZE]
+                
+            self._history_dirty = True
+            
+            if not self._history_save_timer:
+                self._history_save_timer = QTimer(self)
+                self._history_save_timer.setSingleShot(True)
+                self._history_save_timer.timeout.connect(self._flush_history)
+                
+            self._history_save_timer.start(HISTORY_SAVE_DEBOUNCE_MS)
+
+    def _flush_history(self) -> None:
+        """Flush debounced history to disk file."""
+        if self._history_dirty:
+            self._save_history()
+            self._history_dirty = False
+
+    def _load_history(self) -> None:
+        """Load history from history.json with corruption recovery."""
+        try:
+            if self.history_file.exists():
+                with open(self.history_file, 'r', encoding='utf-8') as f:
+                    self.history = json.load(f)
+                    if not isinstance(self.history, list):
+                        self.history = []
+        except (json.JSONDecodeError, ValueError, OSError) as e:
+            logger.error(f"Corrupted history file, backing up and resetting: {e}")
+            self._recover_corrupted_file(self.history_file)
+            self.history = []
+
+    def _save_history(self) -> None:
+        """Save history to history.json."""
+        try:
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                json.dump(self.history, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving history: {e}")
+
+    def _load_bookmarks(self) -> None:
+        """Load bookmarks from bookmarks.json with corruption recovery."""
+        try:
+            if self.bookmarks_file.exists():
+                with open(self.bookmarks_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        self.bookmarks.update(data)
+                        self._refresh_bookmarks_toolbar()
+        except (json.JSONDecodeError, ValueError, OSError) as e:
+            logger.error(f"Corrupted bookmarks file, backing up: {e}")
+            self._recover_corrupted_file(self.bookmarks_file)
+
+    def _save_bookmarks(self) -> None:
+        """Save bookmarks to bookmarks.json."""
+        try:
+            with open(self.bookmarks_file, 'w', encoding='utf-8') as f:
+                json.dump(self.bookmarks, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving bookmarks: {e}")
 
     def _add_current_bookmark(self) -> None:
-        """Add current page to bookmarks with undo stack snapshot (MED-007)."""
-        if not self.current_tab():
+        """Add current active page to bookmarks."""
+        current = self.current_tab()
+        if not current or not hasattr(current, 'browser'):
             return
             
-        url = self.current_tab().browser.url().toString()
-        title = getattr(self.current_tab(), 'title', "Bookmark") or "Bookmark"
+        url = current.browser.url().toString()
+        title = current.browser.title().strip() or "Untitled Bookmark"
         
         self.bookmarks_history.append(self.bookmarks.copy())
         self.bookmarks_future.clear()
@@ -897,312 +1183,93 @@ class Window(QMainWindow):
         self.bookmarks[title] = url
         self._refresh_bookmarks_toolbar()
         self._save_bookmarks()
-        self.log_action(f"⭐ Bookmarked: {title}")
-        self.show_toast(f"Bookmarked: {title}")
-
-    def apply_theme(self, theme_name: str) -> None:
-        """Apply theme styling using ThemeManager (CRIT-002, HIGH-005)."""
-        self.current_theme = ThemeManager.apply_to_window(self, theme_name)
-        logger.info(f"Theme applied: {self.current_theme}")
-        self.log_action(f"🎨 Theme: {self.current_theme}")
-
-    def log_action(self, message: str) -> None:
-        """Log action to in-memory console, persistent debug.log, and status bar (MED-010)."""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_entry = f"[{timestamp}] {message}"
-        
-        # Persist log entry to debug.log file (MED-010)
-        try:
-            with open(self.log_file, 'a', encoding='utf-8') as f:
-                f.write(log_entry + "\n")
-        except Exception:
-            pass
-        
-        # Display in-memory console
-        try:
-            if hasattr(self, 'console') and self.console:
-                self.console.appendPlainText(log_entry)
-                scrollbar = self.console.verticalScrollBar()
-                scrollbar.setValue(scrollbar.maximum())
-        except Exception:
-            pass
-        
-        # Display status bar
-        try:
-            if hasattr(self, 'status_label') and self.status_label:
-                self.status_label.setText(message)
-        except Exception:
-            pass
-
-    def add_to_history(self, url: str) -> None:
-        """Add URL to browsing history with bounded size and debounced disk save (HIGH-006, MED-011)."""
-        current = self.current_tab()
-        is_tab_private = current.is_private if current else False
-        
-        if not self.is_private_mode and not is_tab_private and url and url.startswith(('http://', 'https://', 'file://')):
-            self.history.append(url)
-            # Bound history size to HISTORY_MAX_SIZE
-            if len(self.history) > HISTORY_MAX_SIZE:
-                self.history = self.history[-HISTORY_MAX_SIZE:]
-            
-            # Debounce disk write with singleShot timer to prevent disk thrashing (MED-011)
-            self._history_dirty = True
-            if self._history_save_timer is None:
-                self._history_save_timer = QTimer(self)
-                self._history_save_timer.setSingleShot(True)
-                self._history_save_timer.timeout.connect(self._flush_history)
-            self._history_save_timer.start(HISTORY_SAVE_DEBOUNCE_MS)
-
-    def _flush_history(self) -> None:
-        """Synchronously flush history buffer to file."""
-        if self._history_dirty:
-            self._save_history()
-            self._history_dirty = False
-
-    def _save_history(self) -> None:
-        """Save browsing history to file."""
-        try:
-            with open(self.history_file, 'w', encoding='utf-8') as f:
-                json.dump(self.history, f)
-        except Exception as e:
-            logger.error(f"Error saving history: {e}")
-
-    def _load_history(self) -> None:
-        """Load browsing history from file with error recovery (MED-009)."""
-        try:
-            if self.history_file.exists():
-                with open(self.history_file, 'r', encoding='utf-8') as f:
-                    self.history = json.load(f)
-                    if not isinstance(self.history, list):
-                        self.history = []
-        except (json.JSONDecodeError, OSError) as e:
-            logger.error(f"Corrupted history file: {e}")
-            self._recover_corrupted_file(self.history_file)
-            self.history = []
-
-    def _save_bookmarks(self) -> None:
-        """Save bookmarks to file."""
-        try:
-            with open(self.bookmarks_file, 'w', encoding='utf-8') as f:
-                json.dump(self.bookmarks, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving bookmarks: {e}")
-
-    def _load_bookmarks(self) -> None:
-        """Load bookmarks from file with error recovery (MED-009)."""
-        try:
-            if self.bookmarks_file.exists():
-                with open(self.bookmarks_file, 'r', encoding='utf-8') as f:
-                    saved_bookmarks = json.load(f)
-                    if isinstance(saved_bookmarks, dict):
-                        self.bookmarks.update(saved_bookmarks)
-            self._refresh_bookmarks_toolbar()
-        except (json.JSONDecodeError, OSError) as e:
-            logger.error(f"Corrupted bookmarks file: {e}")
-            self._recover_corrupted_file(self.bookmarks_file)
-
-    def contextMenuEvent(self, event: Any) -> None:
-        """Handle right-click context menu."""
-        menu = QMenu(self)
-        
-        new_tab_action = QAction("📑 New Tab", self)
-        new_tab_action.triggered.connect(lambda: self.add_new_tab())
-        menu.addAction(new_tab_action)
-        
-        close_tab_action = QAction("🗙 Close Tab", self)
-        close_tab_action.triggered.connect(self.close_current_tab)
-        menu.addAction(close_tab_action)
-        
-        menu.addSeparator()
-        
-        # Theme submenu
-        theme_menu = menu.addMenu("🎨 Theme")
-        for theme_name in THEMES.keys():
-            theme_action = QAction(theme_name, self)
-            theme_action.triggered.connect(lambda _, t=theme_name: self.apply_theme(t))
-            theme_menu.addAction(theme_action)
-        
-        menu.addSeparator()
-        
-        # Log console toggle
-        toggle_log_action = QAction("📝 Toggle Log Console", self)
-        toggle_log_action.triggered.connect(self.toggle_log_console)
-        menu.addAction(toggle_log_action)
-        
-        # Privacy toggle
-        private_action = QAction(
-            f"{'🔓 Disable' if self.is_private_mode else '🔒 Enable'} Private Mode",
-            self
-        )
-        private_action.triggered.connect(self.toggle_private_mode)
-        menu.addAction(private_action)
-        
-        menu.exec_(event.globalPos())
-
-    def toggle_log_console(self) -> None:
-        """Toggle log console visibility."""
-        visible = not self.console.isVisible()
-        self.console.setVisible(visible)
-        self.log_action(f"📝 Log console {'shown' if visible else 'hidden'}")
-
-    def handle_ssl_error(self, error: Any) -> bool:
-        """Handle SSL certificate error dialog prompt with explicit user consent."""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("🔒 SSL Certificate Error")
-        layout = QVBoxLayout()
-        
-        host_str = error.url().host() if hasattr(error, 'url') else "Unknown"
-        desc_str = error.errorDescription() if hasattr(error, 'errorDescription') else "SSL Certificate Validation Failed"
-        
-        message = QLabel(
-            f"<b>SSL Certificate Error</b><br>"
-            f"<code>{desc_str}</code><br><br>"
-            f"Website: <code>{host_str}</code><br><br>"
-            f"Do you want to proceed anyway?"
-        )
-        layout.addWidget(message)
-        
-        btn_layout = QHBoxLayout()
-        proceed_btn = QPushButton("✓ Proceed")
-        cancel_btn = QPushButton("✕ Cancel")
-        
-        proceed_btn.clicked.connect(lambda: dialog.accept())
-        cancel_btn.clicked.connect(dialog.reject)
-        
-        btn_layout.addWidget(proceed_btn)
-        btn_layout.addWidget(cancel_btn)
-        layout.addLayout(btn_layout)
-        
-        dialog.setLayout(layout)
-        accepted = (dialog.exec_() == QDialog.Accepted)
-        if accepted:
-            error.ignoreCertificateError()
-            logger.info(f"SSL certificate error ignored for {host_str}")
-        return accepted
+        self.update_bookmark_button_state()
+        self.show_toast(f"⭐ Bookmarked: {title[:25]}")
+        self.log_action(f"⭐ Bookmark added: {title}")
 
     def on_download_requested(self, download: QWebEngineDownloadItem) -> None:
-        """Handle download requests with rigorous error checking and notifications (CRIT-004)."""
+        """Handle download requests and pass to DownloadManager."""
         try:
-            url_str = download.url().toString()[:60]
-            self.log_action(f"📥 Download requested: {url_str}...")
+            default_path = download.path()
+            suggested_filename = os.path.basename(default_path)
+            downloads_dir = str(Path.home() / "Downloads")
+            os.makedirs(downloads_dir, exist_ok=True)
             
-            raw_suggested = download.path() or download.url().path().split('/')[-1] or 'download'
-            suggested = os.path.basename(raw_suggested)
-            default_dir = os.path.join(os.path.expanduser('~'), 'Downloads')
-            default_path = os.path.join(default_dir, suggested)
+            target_path = os.path.join(downloads_dir, suggested_filename)
             
-            path, _ = QFileDialog.getSaveFileName(
-                self, 
-                'Save File As', 
-                default_path,
-                "All Files (*.*)"
+            save_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Download File",
+                target_path,
+                "All Files (*)"
             )
             
-            if not path:
+            if not save_path:
                 download.cancel()
-                self.log_action("📥 Download cancelled by user")
+                self.log_action(f"Download cancelled: {suggested_filename}")
                 return
-            
-            try:
-                download.setPath(path)
-            except Exception as e:
-                logger.error(f"Failed to set download path '{path}': {e}")
-                QMessageBox.warning(
-                    self, 
-                    "Download Error", 
-                    f"Could not save file to:\n{path}\n\nError: {str(e)}"
-                )
-                download.cancel()
-                return
-            
-            download.accept()
-            
-            if hasattr(self, 'download_manager') and self.download_manager:
-                self.download_manager.add_download(download)
-                self.download_manager.show()
-                self.log_action(f"✓ Download started: {os.path.basename(path)}")
                 
+            download.setPath(save_path)
+            download.accept()
+            self.download_manager.add_download(download)
+            self.show_downloads()
+            self.log_action(f"📥 Download started: {suggested_filename}")
+            
         except Exception as e:
-            err_msg = format_error_message(e)
-            logger.error(f"Download request error: {err_msg}")
-            self.log_action(f"❌ Download error: {err_msg}")
-            QMessageBox.warning(self, "Download Error", f"An error occurred while processing download:\n{err_msg}")
+            logger.error(f"Download request handling failed: {e}")
+            try:
+                download.cancel()
+            except Exception:
+                pass
+            QMessageBox.warning(self, "Download Error", f"Unable to start download:\n{e}")
 
     def save_session(self) -> None:
-        """Save session data including URL, title, and zoom factor per tab (MED-004)."""
-        session_data = {
-            "tabs": [],
-            "current_tab": self.tabs.currentIndex(),
-            "theme": self.current_theme
-        }
-        
+        """Save open non-private tab URLs and zoom levels to session.json."""
+        session_data = []
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
-            if tab and hasattr(tab, 'browser'):
+            if tab and hasattr(tab, 'browser') and not getattr(tab, 'is_private', False):
                 url = tab.browser.url().toString()
-                title = getattr(tab, 'title', 'New Tab')
-                zoom = tab.browser.zoomFactor()
-                session_data["tabs"].append({
-                    "url": url,
-                    "title": title,
-                    "zoom": zoom
-                })
-        
+                if url and url != "about:blank":
+                    zoom = tab.browser.zoomFactor()
+                    session_data.append({
+                        "url": url,
+                        "zoom": zoom,
+                        "pinned": getattr(tab, 'is_pinned', False)
+                    })
+                    
         try:
             with open(self.session_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2)
-            logger.info("Session saved")
         except Exception as e:
             logger.error(f"Error saving session: {e}")
 
     def restore_session(self) -> None:
-        """Restore previous session with URL validation, zoom levels, and corrupted file recovery (HIGH-002, MED-004, MED-009)."""
+        """Restore previous session tabs and zoom factors with corruption recovery."""
         try:
             if self.session_file.exists():
                 with open(self.session_file, 'r', encoding='utf-8') as f:
                     session_data = json.load(f)
-                
-                # Restore theme
-                theme = session_data.get("theme", self.current_theme)
-                self.apply_theme(theme)
-                
-                # Restore tabs
-                tabs_data = session_data.get("tabs", [])
-                if tabs_data and isinstance(tabs_data, list):
-                    while self.tabs.count() > 0:
-                        tab = self.tabs.widget(0)
-                        self.tabs.removeTab(0)
-                        if tab:
-                            tab.deleteLater()
-                            
-                    for tab_data in tabs_data:
-                        raw_url = tab_data.get("url", "")
-                        # Validate URL before restoring (HIGH-002)
-                        if raw_url and (raw_url.startswith(('http://', 'https://', 'file://', 'about:')) or os.path.exists(raw_url)):
-                            new_tab = self.add_new_tab(raw_url)
-                            zoom_val = tab_data.get("zoom")
-                            if new_tab and zoom_val:
-                                try:
-                                    new_tab.browser.setZoomFactor(float(zoom_val))
-                                except Exception:
-                                    pass
-                        else:
-                            logger.warning(f"Skipping invalid URL during session restore: {raw_url}")
-                    
-                    current_tab_index = session_data.get("current_tab", 0)
-                    if 0 <= current_tab_index < self.tabs.count():
-                        self.tabs.setCurrentIndex(current_tab_index)
-                
-                logger.info("Session restored successfully")
-                self.log_action("✓ Session restored")
-                
-        except (json.JSONDecodeError, OSError, ValueError) as e:
+                    if isinstance(session_data, list) and session_data:
+                        for item in session_data:
+                            if isinstance(item, dict):
+                                url = item.get("url")
+                                zoom = item.get("zoom", DEFAULT_ZOOM)
+                                pinned = item.get("pinned", False)
+                                if url:
+                                    tab = self.add_new_tab(url)
+                                    if tab:
+                                        tab.browser.setZoomFactor(float(zoom))
+                                        if pinned and hasattr(tab, 'set_pinned'):
+                                            tab.set_pinned(True)
+                            elif isinstance(item, str):
+                                self.add_new_tab(item)
+        except (json.JSONDecodeError, ValueError, OSError) as e:
             logger.error(f"Corrupted session file: {e}")
             self._recover_corrupted_file(self.session_file)
             
-        # Ensure at least one tab is open
         if self.tabs.count() == 0:
-            self.add_new_tab()
+            self.add_new_tab(self.homepage)
 
     def closeEvent(self, event: Any) -> None:
         """Handle window close event, flush pending history, and save settings."""

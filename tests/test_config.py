@@ -1,16 +1,20 @@
 import unittest
 import os
 from PyQt5.QtCore import QUrl
+from PyQt5.QtWidgets import QApplication
 from fibrowser.config import (
-    THEMES, SEARCH_ENGINES, DEFAULT_HOME_PAGE, MAX_TABS,
-    HISTORY_MAX_SIZE, is_safe_local_path, format_error_message
+    THEMES, SEARCH_ENGINES, DEFAULT_HOME_PAGE, DEFAULT_SEARCH_ENGINE, MAX_TABS,
+    HISTORY_MAX_SIZE, is_safe_local_path, format_error_message, get_icon
 )
+
+app = QApplication.instance() or QApplication([])
 
 class TestConfigAndUtils(unittest.TestCase):
     """Test suite for config constants, path security, and error formatting."""
 
     def test_default_constants(self):
-        self.assertEqual(DEFAULT_HOME_PAGE, "https://www.bing.com")
+        self.assertEqual(DEFAULT_HOME_PAGE, "https://www.msn.com")
+        self.assertEqual(DEFAULT_SEARCH_ENGINE, "Google")
         self.assertGreater(MAX_TABS, 0)
         self.assertEqual(HISTORY_MAX_SIZE, 500)
         self.assertIn("Google", SEARCH_ENGINES)
@@ -57,6 +61,12 @@ class TestConfigAndUtils(unittest.TestCase):
         
         # String fallback
         self.assertEqual(format_error_message("Simple error"), "Simple error")
+
+    def test_icon_loading(self):
+        icon_ico = get_icon("fibrowser.ico")
+        self.assertFalse(icon_ico.isNull())
+        icon_png = get_icon("fibrowser.png")
+        self.assertFalse(icon_png.isNull())
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Fibrowser Pro package entry point.
-Launches the main application window, configures logging levels, and catches unhandled exceptions.
+Launches the main application window, configures logging levels, sets AppUserModelID on Windows,
+and catches unhandled exceptions.
 """
 
 import os
@@ -13,6 +14,15 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QStyle
 
 from fibrowser.config import APP_NAME, APP_VERSION, get_icon
 from fibrowser.ui.window import Window
+
+# Set AppUserModelID on Windows so taskbar displays the native application icon
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        app_user_model_id = 'syogesh999.fibrowser.pro.v2'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_user_model_id)
+    except Exception:
+        pass
 
 # Configure logging dynamically from environment
 log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -64,11 +74,14 @@ def main() -> int:
         app.setApplicationVersion(APP_VERSION)
         app.setApplicationDisplayName(f"{APP_NAME} v{APP_VERSION}")
         
-        # Set application default window icon
+        # Set application default window and taskbar icon
         try:
-            app.setWindowIcon(get_icon("favicon.png", QStyle.SP_ComputerIcon))
+            app.setWindowIcon(get_icon("fibrowser.ico", QStyle.SP_ComputerIcon))
         except Exception:
-            pass
+            try:
+                app.setWindowIcon(get_icon("fibrowser.png", QStyle.SP_ComputerIcon))
+            except Exception:
+                pass
         
         # Create and show main browser window
         window = Window()

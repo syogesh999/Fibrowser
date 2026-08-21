@@ -30,21 +30,23 @@ echo ================================================================
 echo.
 
 :: Step 1: Build local executable and ZIP archive
-echo [1/4] Building standalone Windows executable and ZIP archive...
-py -m PyInstaller --noconfirm --onefile --windowed --name "FibrowserPro" --add-data "assets;assets" main.py
+echo [1/4] Building standalone Windows executable and Installer...
+py -m PyInstaller --noconfirm --onefile --windowed --name "FibrowserPro" --icon "assets/icons/fibrowser.ico" --add-data "assets;assets" main.py
 if errorlevel 1 (
     echo [ERROR] PyInstaller build failed!
     pause
     exit /b 1
 )
 
-powershell -Command "Compress-Archive -Path dist\FibrowserPro.exe -DestinationPath dist\FibrowserPro-%TAG%-windows-x64.zip -Force"
+py -m PyInstaller --noconfirm --onefile --windowed --name "FibrowserInstaller" --icon "assets/icons/fibrowser.ico" --add-data "assets;assets" installer.py
+
+powershell -Command "Compress-Archive -Path dist\FibrowserPro.exe, dist\FibrowserInstaller.exe -DestinationPath dist\FibrowserPro-%TAG%-windows-x64.zip -Force"
 
 :: Step 2: Stage and commit all changes
 echo.
 echo [2/4] Committing code changes...
 git add -A
-git commit -m "Release %TAG%: Automated release build" --allow-empty
+git commit -m "Release %TAG%: Automated release build with enhancements" --allow-empty
 
 :: Step 3: Create annotated tag
 echo.
@@ -70,7 +72,7 @@ echo.
 echo GitHub Actions is now automatically:
 echo   1. Building the release binaries in the cloud
 echo   2. Creating the GitHub Release for %TAG%
-echo   3. Attaching the .exe and .zip files to the release page
+echo   3. Attaching the .exe, installer, and .zip files to the release page
 echo.
 echo Check live progress at:
 echo   https://github.com/syogesh999/Fibrowser/actions
