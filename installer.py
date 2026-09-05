@@ -334,7 +334,6 @@ class FibrowserInstallerWizard(QWizard):
         self.addPage(self.finished_page)
         
         self.currentIdChanged.connect(self._on_page_changed)
-        self.button(QWizard.NextButton).clicked.connect(self._on_next_clicked)
         self.worker: Optional[InstallWorker] = None
 
     def _on_page_changed(self, page_id: int) -> None:
