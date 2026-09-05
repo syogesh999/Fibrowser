@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication, QStyle
 DEFAULT_HOME_PAGE = "https://www.msn.com"
 DEFAULT_SEARCH_ENGINE = "Google"
 APP_NAME = "Fibrowser Pro"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 WINDOW_MIN_WIDTH = 1000
 WINDOW_MIN_HEIGHT = 700
 MAX_TABS = 100

@@ -39,10 +39,10 @@ class WelcomeDialog(QDialog):
         header_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(header_label)
         
-        sub_label = QLabel("Your private, fast, and modern desktop web browser.")
-        sub_label.setStyleSheet("font-size: 13px; color: #8ab4f8;")
-        sub_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(sub_label)
+        self.sub_label = QLabel("Your private, fast, and modern desktop web browser.")
+        self.sub_label.setObjectName("welcomeSubtitle")
+        self.sub_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.sub_label)
         
         layout.addSpacing(6)
         

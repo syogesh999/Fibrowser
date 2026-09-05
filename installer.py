@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (QApplication, QWizard, QWizardPage, QVBoxLayout,
                              QWidget, QStyle)
 
 APP_NAME = "Fibrowser Pro"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 DEFAULT_INSTALL_DIR = os.path.join(os.environ.get("LOCALAPPDATA", "C:\\Users\\Public"), "Programs", "Fibrowser Pro")
 
 def get_resource_path() -> str:

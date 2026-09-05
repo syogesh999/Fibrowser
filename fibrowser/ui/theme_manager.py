@@ -46,6 +46,7 @@ class ThemeManager:
             QWidget {{
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
                 font-size: 13px;
+                color: {theme.fg};
             }}
             
             QMainWindow {{
@@ -57,6 +58,61 @@ class ThemeManager:
                 background-color: {theme.bg};
                 color: {theme.fg};
                 border: 1px solid {theme.hover};
+            }}
+            
+            /* Labels */
+            QLabel {{
+                color: {theme.fg};
+            }}
+
+            QLabel#welcomeSubtitle {{
+                color: {theme.accent};
+                font-size: 13px;
+                font-weight: 500;
+            }}
+
+            /* Form Layout Labels */
+            QFormLayout QLabel {{
+                color: {theme.fg};
+            }}
+
+            /* Checkboxes & Radio Buttons */
+            QCheckBox, QRadioButton {{
+                color: {theme.fg};
+                spacing: 8px;
+            }}
+            QCheckBox::indicator, QRadioButton::indicator {{
+                width: 16px;
+                height: 16px;
+                border: 1px solid {theme.hover};
+                border-radius: 3px;
+                background: {theme.url_bg};
+            }}
+            QRadioButton::indicator {{
+                border-radius: 8px;
+            }}
+            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
+                background-color: {theme.accent};
+                border-color: {theme.accent};
+            }}
+            QCheckBox::indicator:hover, QRadioButton::indicator:hover {{
+                border-color: {theme.accent};
+            }}
+
+            /* Group Boxes */
+            QGroupBox {{
+                color: {theme.fg};
+                border: 1px solid {theme.hover};
+                border-radius: 6px;
+                margin-top: 12px;
+                padding-top: 12px;
+                font-weight: bold;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                padding: 0 6px;
+                color: {theme.fg};
             }}
             
             /* Tooltips */
@@ -106,7 +162,7 @@ class ThemeManager:
                 background: {theme.hover};
             }}
             
-            /* Address Bar */
+            /* Address Bar & Inputs */
             QLineEdit {{
                 background: {theme.url_bg};
                 border: 1px solid {theme.hover};
@@ -119,6 +175,27 @@ class ThemeManager:
             QLineEdit:focus {{
                 border: 1px solid {theme.accent};
                 background: {theme.bg};
+            }}
+
+            QLineEdit[placeholderText] {{
+                color: {theme.fg};
+            }}
+
+            /* Find Bar Container & Controls */
+            QWidget#find_bar {{
+                background-color: {theme.tab_bg};
+                border-bottom: 1px solid {theme.hover};
+                padding: 2px 8px;
+            }}
+
+            QWidget#find_bar QLabel {{
+                color: {theme.fg};
+                font-weight: bold;
+            }}
+
+            QWidget#find_bar QLineEdit {{
+                border-radius: 12px;
+                padding: 4px 10px;
             }}
             
             /* Search / Engine Combo Box */
@@ -210,11 +287,17 @@ class ThemeManager:
                 color: {theme.bg};
             }}
             
-            /* Status Bar */
+            /* Status Bar & Children */
             QStatusBar {{
                 background: {theme.bg};
                 color: {theme.fg};
                 border-top: 1px solid {theme.hover};
+            }}
+
+            QStatusBar QLabel {{
+                color: {theme.fg};
+                background: transparent;
+                padding: 0 4px;
             }}
             
             /* Loading Progress Bar */
@@ -229,10 +312,11 @@ class ThemeManager:
                 border-radius: 1px;
             }}
             
-            /* List Widget Items & Download Bars */
+            /* List Widget Items & Alternating Rows */
             QListWidget {{
                 background: {theme.bg};
                 color: {theme.fg};
+                alternate-background-color: {theme.tab_bg};
                 border: 1px solid {theme.hover};
                 border-radius: 4px;
                 padding: 4px;
@@ -241,6 +325,12 @@ class ThemeManager:
             QListWidget::item {{
                 padding: 6px;
                 border-radius: 4px;
+                color: {theme.fg};
+            }}
+
+            QListWidget::item:alternate {{
+                background-color: {theme.tab_bg};
+                color: {theme.fg};
             }}
             
             QListWidget::item:hover {{
@@ -250,6 +340,11 @@ class ThemeManager:
             QListWidget::item:selected {{
                 background: {theme.accent};
                 color: {theme.bg};
+            }}
+
+            QListWidget QLabel {{
+                color: {theme.fg};
+                background: transparent;
             }}
             
             QListWidget QProgressBar {{
@@ -287,11 +382,22 @@ class ThemeManager:
             QMenu::item {{
                 padding: 6px 20px;
                 border-radius: 4px;
+                color: {theme.fg};
             }}
             
             QMenu::item:selected {{
                 background: {theme.accent};
                 color: {theme.bg};
+            }}
+
+            /* Message Boxes */
+            QMessageBox {{
+                background-color: {theme.bg};
+                color: {theme.fg};
+            }}
+
+            QMessageBox QLabel {{
+                color: {theme.fg};
             }}
             
             /* Scrollbars */

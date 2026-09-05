@@ -9,7 +9,7 @@ from pathlib import Path
 
 # Read version from main.py
 main_file = Path(__file__).parent / "main.py"
-version = "2.0.0"
+version = "2.1.0"
 
 # Read README
 readme_file = Path(__file__).parent / "README.md"

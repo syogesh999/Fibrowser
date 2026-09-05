@@ -196,6 +196,7 @@ class Window(QMainWindow):
         
         # Find Bar
         self.find_bar = QWidget()
+        self.find_bar.setObjectName("find_bar")
         find_layout = QHBoxLayout(self.find_bar)
         find_layout.setContentsMargins(10, 4, 10, 4)
         self.find_input = QLineEdit()

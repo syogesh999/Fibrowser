@@ -10,7 +10,7 @@ echo.
 :: Get current version from config.py using Python
 for /f "delims=" %%v in ('py -c "from fibrowser.config import APP_VERSION; print(APP_VERSION)" 2^>nul') do set CURRENT_VERSION=%%v
 
-if "%CURRENT_VERSION%"=="" set CURRENT_VERSION=2.0.0
+if "%CURRENT_VERSION%"=="" set CURRENT_VERSION=2.1.0
 
 echo Current Version detected: v%CURRENT_VERSION%
 echo.
