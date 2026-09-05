@@ -24,6 +24,16 @@ APP_NAME = "Fibrowser Pro"
 APP_VERSION = "2.0.0"
 DEFAULT_INSTALL_DIR = os.path.join(os.environ.get("LOCALAPPDATA", "C:\\Users\\Public"), "Programs", "Fibrowser Pro")
 
+def get_resource_path() -> str:
+    """Return the base path for bundled resources.
+    
+    When running as a PyInstaller bundle, resources are extracted to sys._MEIPASS.
+    When running from source, resources are relative to this script's directory.
+    """
+    if getattr(sys, '_MEIPASS', None):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
 INSTALLER_STYLE = """
 QWidget {
     background-color: #0f172a;
@@ -152,9 +162,11 @@ class InstallWorker(QThread):
             # Stage 2: Copying Binaries and Core Files
             self.progress_changed.emit(25, "Extracting and installing application files...")
             
-            # Check if compiled dist/FibrowserPro.exe exists or copy project source
-            dist_exe = os.path.join(self.source_dir, "dist", "FibrowserPro.exe")
+            # Locate FibrowserPro.exe: check bundle root first, then dist/ subfolder
             target_exe = os.path.join(self.target_dir, "FibrowserPro.exe")
+            dist_exe = os.path.join(self.source_dir, "FibrowserPro.exe")
+            if not os.path.exists(dist_exe):
+                dist_exe = os.path.join(self.source_dir, "dist", "FibrowserPro.exe")
             
             if os.path.exists(dist_exe):
                 shutil.copy2(dist_exe, target_exe)
@@ -346,7 +358,7 @@ class FibrowserInstallerWizard(QWizard):
         target_dir = self.welcome_page.dir_input.text().strip()
         desktop = self.welcome_page.desktop_cb.isChecked()
         startmenu = self.welcome_page.startmenu_cb.isChecked()
-        source_dir = os.path.dirname(os.path.abspath(__file__))
+        source_dir = get_resource_path()
         
         self.worker = InstallWorker(target_dir, desktop, startmenu, source_dir)
         self.worker.progress_changed.connect(self._update_progress)

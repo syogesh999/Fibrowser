@@ -38,9 +38,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-py -m PyInstaller --noconfirm --onefile --windowed --name "FibrowserInstaller" --icon "assets/icons/fibrowser.ico" --add-data "assets;assets" installer.py
+py -m PyInstaller --noconfirm FibrowserInstaller.spec
+if errorlevel 1 (
+    echo [ERROR] FibrowserInstaller build failed!
+    pause
+    exit /b 1
+)
 
-powershell -Command "Compress-Archive -Path dist\FibrowserPro.exe, dist\FibrowserInstaller.exe -DestinationPath dist\FibrowserPro-%TAG%-windows-x64.zip -Force"
+powershell -Command "Compress-Archive -Path dist\FibrowserPro.exe -DestinationPath dist\FibrowserPro-%TAG%-windows-x64.zip -Force"
+powershell -Command "Compress-Archive -Path dist\FibrowserInstaller.exe -DestinationPath dist\FibrowserInstaller-%TAG%-windows-x64.zip -Force"
 
 :: Step 2: Stage and commit all changes
 echo.
