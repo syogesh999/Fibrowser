@@ -97,32 +97,33 @@ Double-click `build.bat` (or run `scripts/build.bat`) to generate `dist/Fibrowse
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl + T` | New Tab |
-| `Ctrl + W` | Close Tab |
-| `Ctrl + Tab` | Next Tab |
-| `Ctrl + Shift + Tab` | Previous Tab |
-| `Ctrl + Shift + T` | Reopen Closed Tab |
-| `Ctrl + L` | Focus URL / Address Bar |
-| `F5` | Refresh Page |
-| `Ctrl + Shift + R` | Hard Refresh (Bypass Cache) |
-| `Ctrl + H` | Open Browsing History |
-| `Ctrl + B` | Toggle Bookmarks Toolbar |
-| `Ctrl + J` | Open Downloads Manager |
-| `Ctrl + Shift + P` | Toggle Private Browsing Mode |
-| `Ctrl + F` | Find in Page |
-| `F11` | Toggle Fullscreen |
-| `F12` | Toggle Developer Tools |
-| `Ctrl + =` / `Ctrl + -` | Zoom In / Zoom Out |
-| `Ctrl + 0` | Reset Zoom (100%) |
-| `Ctrl + Z` | Undo Bookmark Action |
+| Shortcut                | Action                       |
+| ----------------------- | ---------------------------- |
+| `Ctrl + T`              | New Tab                      |
+| `Ctrl + W`              | Close Tab                    |
+| `Ctrl + Tab`            | Next Tab                     |
+| `Ctrl + Shift + Tab`    | Previous Tab                 |
+| `Ctrl + Shift + T`      | Reopen Closed Tab            |
+| `Ctrl + L`              | Focus URL / Address Bar      |
+| `F5`                    | Refresh Page                 |
+| `Ctrl + Shift + R`      | Hard Refresh (Bypass Cache)  |
+| `Ctrl + H`              | Open Browsing History        |
+| `Ctrl + B`              | Toggle Bookmarks Toolbar     |
+| `Ctrl + J`              | Open Downloads Manager       |
+| `Ctrl + Shift + P`      | Toggle Private Browsing Mode |
+| `Ctrl + F`              | Find in Page                 |
+| `F11`                   | Toggle Fullscreen            |
+| `F12`                   | Toggle Developer Tools       |
+| `Ctrl + =` / `Ctrl + -` | Zoom In / Zoom Out           |
+| `Ctrl + 0`              | Reset Zoom (100%)            |
+| `Ctrl + Z`              | Undo Bookmark Action         |
 
 ---
 
 ## 🎨 Theme Support
 
 Choose from 5 curated themes:
+
 - **Dark** (Default)
 - **Light**
 - **Blue**
@@ -136,3 +137,11 @@ Switch themes in **Settings (⚙️)** with live preview, or right-click any emp
 ## 🧾 License
 
 This project is open-source and available under the **MIT License**.
+
+## Official Download Page
+
+The repository root contains a static GitHub Pages download portal. It fetches the latest release from the public GitHub Releases API and selects the highest-priority Windows `.exe` asset without bundling the executable in the site.
+
+- Configuration: `js/app.js` (`CONFIG`)
+- Local preview: open `index.html` in a browser, or serve the repository root with any static HTTP server
+- GitHub Pages: configure Pages to deploy the `main` branch from the repository root
